@@ -1,0 +1,158 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+@layer base {
+    body {
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        background-color: #f8f9fb;
+        color: #0f172a;
+        background-image:
+            radial-gradient(at 40% 20%, hsla(228, 100%, 74%, 0.05) 0px, transparent 50%),
+            radial-gradient(at 80% 0%, hsla(189, 100%, 56%, 0.05) 0px, transparent 50%),
+            radial-gradient(at 0% 50%, hsla(355, 100%, 93%, 0.04) 0px, transparent 50%);
+        background-attachment: fixed;
+    }
+
+    * {
+        scrollbar-width: thin;
+        scrollbar-color: #e2e8f0 transparent;
+    }
+
+    ::-webkit-scrollbar {
+        width: 5px;
+        height: 5px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: #e2e8f0;
+        border-radius: 999px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: #cbd5e1;
+    }
+
+    ::selection {
+        background: rgba(99, 102, 241, 0.15);
+        color: #312e81;
+    }
+}
+
+@layer utilities {
+    .animate-fadeIn {
+        animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    .animate-slideIn {
+        animation: slideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    .modal-overlay {
+        animation: modalOverlayIn 0.2s ease-out both;
+    }
+
+    .modal-overlay-bg {
+        animation: modalOverlayIn 0.15s ease-out both;
+    }
+
+    .modal-content {
+        animation: modalContentIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes modalOverlayIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes modalContentIn {
+    from {
+        opacity: 0;
+        transform: scale(0.96) translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+@layer components {
+
+    /* ── Card ── */
+    .fw-card {
+        @apply bg-white border border-slate-100/80 rounded-[22px] transition-all duration-300;
+        box-shadow: 0 2px 12px -2px rgba(0, 0, 0, 0.02);
+    }
+
+    .fw-card:hover {
+        @apply border-slate-200;
+        box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.06);
+        transform: translateY(-1px);
+    }
+
+    /* ── Input ── */
+    .fw-input {
+        @apply w-full px-4 py-2.5 rounded-xl border border-slate-200/80 bg-white text-sm text-slate-800 transition-all duration-200 outline-none;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+    }
+
+    .fw-input:focus {
+        @apply border-indigo-400 ring-[3px] ring-indigo-500/10;
+        box-shadow: 0 2px 8px rgba(99, 102, 241, 0.06);
+    }
+
+    .fw-input::placeholder {
+        @apply text-slate-400 font-medium;
+    }
+
+    /* ── Sidebar ── */
+    .fw-sidebar {
+        @apply bg-white border-slate-100;
+        box-shadow: 2px 0 16px -4px rgba(0, 0, 0, 0.02);
+    }
+
+    /* ── Topbar ── */
+    .fw-topbar {
+        @apply bg-white/80 backdrop-blur-xl border-slate-100;
+        box-shadow: 0 2px 16px -4px rgba(0, 0, 0, 0.02);
+    }
+}
