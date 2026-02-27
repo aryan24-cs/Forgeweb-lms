@@ -156,7 +156,7 @@ const Dashboard = () => {
 
                 {/* Project Status Donut and Activity Feed right columns */}
                 <div className={`${!isSales ? 'lg:col-span-1' : 'lg:col-span-3'} flex flex-col gap-5`}>
-                    <div className="bg-white rounded-[22px] p-6 border border-slate-100/80">
+                    <div className="bg-white rounded-[22px] p-6 border border-slate-100/80 shrink-0">
                         <h3 className="text-[14px] font-black text-slate-700 mb-3 flex items-center gap-2">
                             <div className="w-8 h-8 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center">
                                 <FolderGit2 className="w-4 h-4 text-amber-500" />
@@ -178,7 +178,7 @@ const Dashboard = () => {
                         </div>
                     </div>
 
-                    <div className="bg-white rounded-[22px] p-6 border border-slate-100/80 flex flex-col flex-1 h-[270px]">
+                    <div className="bg-white rounded-[22px] p-6 border border-slate-100/80 flex flex-col flex-1 min-h-0 max-h-[350px]">
                         <h3 className="text-[14px] font-black text-slate-700 mb-3 flex items-center gap-2 shrink-0">
                             <div className="w-8 h-8 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center">
                                 <ActivityIcon className="w-4 h-4 text-emerald-500" />
