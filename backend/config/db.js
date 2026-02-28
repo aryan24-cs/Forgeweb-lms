@@ -1,17 +1,35 @@
 import mongoose from 'mongoose';
 
+let cached = global.mongoose;
+
+if (!cached) {
+    cached = global.mongoose = { conn: null, promise: null };
+}
+
 const connectDB = async () => {
-    if (mongoose.connection.readyState >= 1) {
-        // Already connected (warm start on Vercel)
-        return;
+    if (cached.conn) {
+        return cached.conn;
+    }
+
+    if (!cached.promise) {
+        const opts = {
+            bufferCommands: false,
+            serverSelectionTimeoutMS: 10000,
+        };
+        const uri = process.env.MONGO_URI || 'mongodb://localhost:27017/forgeweb-lms';
+        cached.promise = mongoose.connect(uri, opts).then((mongoose) => {
+            console.log(`MongoDB Connected: ${mongoose.connection.host}`);
+            return mongoose;
+        });
     }
 
     try {
-        const conn = await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/forgeweb-lms');
-        console.log(`MongoDB Connected: ${conn.connection.host}`);
+        cached.conn = await cached.promise;
+        return cached.conn;
     } catch (error) {
+        cached.promise = null;
         console.error(`MongoDB Error: ${error.message}`);
-        throw error; // Do not use process.exit(1) in Serverless environments
+        throw error;
     }
 };
 
