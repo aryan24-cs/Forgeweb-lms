@@ -30,9 +30,20 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Connect to MongoDB
-connectDB().then(async () => {
+// Ensure Database Connection is Ready Before API Routes (Critical for Vercel Serverless)
+app.use(async (req, res, next) => {
     try {
+        await connectDB();
+        next();
+    } catch (error) {
+        return res.status(500).json({ message: 'Database connecting failed', error: error.message });
+    }
+});
+
+// Run Seed Logic in background safely
+const syncUsers = async () => {
+    try {
+        await connectDB();
         const initialUsers = [
             { name: 'Admin', email: process.env.ADMIN_EMAIL, password: process.env.ADMIN_PASSWORD, role: 'admin' },
             { name: process.env.EMP1_NAME, email: process.env.EMP1_EMAIL, password: process.env.EMP1_PASSWORD, role: 'sales' },
@@ -62,7 +73,11 @@ connectDB().then(async () => {
     } catch (err) {
         console.log('User seed skipped:', err.message);
     }
-}).catch(err => console.error('DB connection failed:', err.message));
+};
+
+if (process.env.NODE_ENV !== 'production') {
+    syncUsers();
+}
 
 // Routes
 app.use('/api/auth', authRoutes);

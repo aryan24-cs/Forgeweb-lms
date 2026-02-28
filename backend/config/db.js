@@ -1,12 +1,17 @@
 import mongoose from 'mongoose';
 
 const connectDB = async () => {
+    if (mongoose.connection.readyState >= 1) {
+        // Already connected (warm start on Vercel)
+        return;
+    }
+
     try {
         const conn = await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/forgeweb-lms');
         console.log(`MongoDB Connected: ${conn.connection.host}`);
     } catch (error) {
         console.error(`MongoDB Error: ${error.message}`);
-        process.exit(1);
+        throw error; // Do not use process.exit(1) in Serverless environments
     }
 };
 
