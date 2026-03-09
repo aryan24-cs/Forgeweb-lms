@@ -5,48 +5,115 @@ import { saveAs } from 'file-saver';
 import Papa from 'papaparse';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import * as XLSX from 'xlsx';
+
+// Helper to flatten nested object for tabular displays
+const flattenData = (data) => {
+    if (!data || data.length === 0) return [];
+    return data.map(item => {
+        const flatItem = {};
+        for (const [key, value] of Object.entries(item)) {
+            // Ignore system keys and sensitive info
+            if (key.startsWith('_') || key === 'password' || key === '__v') continue;
+
+            if (value && typeof value === 'object' && !Array.isArray(value)) {
+                // Populate deeply nested common properties like client.name, user.name
+                flatItem[key] = value.name || value.title || value.founderName || value._id || JSON.stringify(value);
+            } else if (Array.isArray(value)) {
+                flatItem[key] = value.map(v => (v && typeof v === 'object') ? (v.name || v._id) : v).join(', ');
+            } else if (key.toLowerCase().includes('date') && value) {
+                const dateVal = new Date(value);
+                flatItem[key] = isNaN(dateVal) ? value : dateVal.toLocaleDateString();
+            } else {
+                flatItem[key] = value ?? '—';
+            }
+        }
+        return flatItem;
+    });
+};
 
 const Reports = () => {
     const [loading, setLoading] = useState(false);
 
-    const downloadCSV = async (endpoint, filename) => {
-        setLoading(true);
+    const fetchData = async (endpoint, title) => {
         try {
             const res = await api.get(endpoint);
             const data = Array.isArray(res.data) ? res.data : [res.data];
-            const csv = Papa.unparse(data);
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            saveAs(blob, `${filename}.csv`);
-            toast.success(`${filename}.csv extracted`);
-        } catch { toast.error('Extraction Failed'); }
+
+            if (data.length === 0) {
+                toast.error(`No data available for ${title}.`);
+                return null;
+            }
+            return flattenData(data);
+        } catch (error) {
+            console.error(error);
+            toast.error('Report generation failed. Please try again.');
+            return null;
+        }
+    };
+
+    const downloadCSV = async (endpoint, filename) => {
+        setLoading(true);
+        const data = await fetchData(endpoint, filename);
+        if (data && data.length > 0) {
+            try {
+                const csv = Papa.unparse(data);
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                saveAs(blob, `${filename}.csv`);
+                toast.success(`${filename}.csv extracted`);
+            } catch (err) {
+                toast.error('Report generation failed. Please try again.');
+            }
+        }
+        setLoading(false);
+    };
+
+    const downloadExcel = async (endpoint, filename) => {
+        setLoading(true);
+        const data = await fetchData(endpoint, filename);
+        if (data && data.length > 0) {
+            try {
+                const worksheet = XLSX.utils.json_to_sheet(data);
+                const workbook = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(workbook, worksheet, filename.substring(0, 31)); // Max 31 chars for sheet name
+                XLSX.writeFile(workbook, `${filename}.xlsx`);
+                toast.success(`${filename}.xlsx compiled`);
+            } catch (err) {
+                toast.error('Report generation failed. Please try again.');
+            }
+        }
         setLoading(false);
     };
 
     const downloadPDF = async (title, endpoint) => {
         setLoading(true);
-        try {
-            const res = await api.get(endpoint);
-            const data = Array.isArray(res.data) ? res.data : [res.data];
-            const doc = new jsPDF();
-            doc.setFontSize(18);
-            doc.text(`Agency Command - ${title}`, 14, 22);
-            doc.setFontSize(10);
-            doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 30);
+        const data = await fetchData(endpoint, title);
+        if (data && data.length > 0) {
+            try {
+                const doc = new jsPDF('landscape'); // Landscape holds more columns
+                doc.setFontSize(18);
+                doc.text(`Agency Command - ${title}`, 14, 22);
+                doc.setFontSize(10);
+                doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 30);
 
-            if (data.length > 0) {
-                const keys = Object.keys(data[0]).filter(k => !k.startsWith('_') && k !== 'password' && k !== '__v');
-                const headers = keys.map(k => k.charAt(0).toUpperCase() + k.slice(1));
-                const rows = data.map(item => keys.map(k => {
-                    const v = item[k];
-                    if (typeof v === 'object' && v !== null) return v.name || v._id || JSON.stringify(v);
-                    return String(v ?? '');
-                }));
-                // Using the theme's primary color (#4f46e5)
-                doc.autoTable({ head: [headers], body: rows, startY: 38, styles: { fontSize: 8 }, headStyles: { fillColor: [79, 70, 229] } });
+                const headers = Object.keys(data[0]).map(k => k.charAt(0).toUpperCase() + k.slice(1));
+                const rows = data.map(item => Object.values(item).map(String));
+
+                doc.autoTable({
+                    head: [headers],
+                    body: rows,
+                    startY: 38,
+                    styles: { fontSize: 8, overflow: 'linebreak', cellWidth: 'wrap' },
+                    headStyles: { fillColor: [79, 70, 229] }
+                });
+
+                doc.save(`${title.replace(/\s/g, '_')}.pdf`);
+                toast.success('PDF report compiled');
+            } catch (error) {
+                console.error(error);
+                toast.error('Report generation failed. Please try again.');
             }
-            doc.save(`${title.replace(/\s/g, '_')}.pdf`);
-            toast.success('PDF report compiled');
-        } catch { toast.error('Compilation Failed'); }
+        }
         setLoading(false);
     };
 
@@ -90,6 +157,22 @@ const Reports = () => {
             icon: <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>,
             color: 'text-violet-600',
             bg: 'bg-violet-50'
+        },
+        {
+            title: 'Expense Operations & Outflows',
+            desc: 'Consolidated report parsing internal expenses, overhead limits, and third-party vendor sums.',
+            endpoint: '/expenses',
+            icon: <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 12H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+            color: 'text-rose-600',
+            bg: 'bg-rose-50'
+        },
+        {
+            title: 'Founder Profit & Withdrawals',
+            desc: 'Formal declaration of executive share splits and completed capital withdrawals.',
+            endpoint: '/founder-withdrawals',
+            icon: <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>,
+            color: 'text-fuchsia-600',
+            bg: 'bg-fuchsia-50'
         }
     ];
 
@@ -98,7 +181,7 @@ const Reports = () => {
             {/* Header */}
             <div>
                 <h1 className="text-3xl font-black text-slate-800 tracking-tight">Intelligence Reports</h1>
-                <p className="text-base text-slate-500 mt-1 font-medium text-balance max-w-lg">Export structured data matrices to comma-separated models or formalized portable documents.</p>
+                <p className="text-base text-slate-500 mt-1 font-medium text-balance max-w-lg">Export structured data matrices to comma-separated models, spreadsheets, or formalized portable documents.</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -115,13 +198,17 @@ const Reports = () => {
                             <h3 className="font-black text-[16px] text-slate-800 tracking-tight leading-tight">{r.title}</h3>
                             <p className="text-[13px] text-slate-500 mt-2 mb-6 font-medium leading-relaxed flex-1">{r.desc}</p>
 
-                            <div className="grid grid-cols-2 gap-3 mt-auto w-full pt-4 border-t border-slate-100">
-                                <button disabled={loading} onClick={() => downloadCSV(r.endpoint, r.title)} className="flex items-center justify-center gap-2 py-2.5 text-[12px] font-bold uppercase tracking-widest rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors disabled:opacity-50 group-hover:bg-slate-800 group-hover:text-white">
-                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                            <div className="grid grid-cols-3 gap-2 mt-auto w-full pt-4 border-t border-slate-100">
+                                <button disabled={loading} onClick={() => downloadCSV(r.endpoint, r.title)} className="flex items-center justify-center gap-1.5 py-2.5 text-[11px] font-bold uppercase tracking-widest rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors disabled:opacity-50 group-hover:bg-slate-800 group-hover:text-white">
+                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
                                     CSV
                                 </button>
-                                <button disabled={loading} onClick={() => downloadPDF(r.title, r.endpoint)} className="flex items-center justify-center gap-2 py-2.5 text-[12px] font-bold uppercase tracking-widest rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition-colors disabled:opacity-50">
-                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                <button disabled={loading} onClick={() => downloadExcel(r.endpoint, r.title)} className="flex items-center justify-center gap-1.5 py-2.5 text-[11px] font-bold uppercase tracking-widest rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors disabled:opacity-50">
+                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                    XLSX
+                                </button>
+                                <button disabled={loading} onClick={() => downloadPDF(r.title, r.endpoint)} className="flex items-center justify-center gap-1.5 py-2.5 text-[11px] font-bold uppercase tracking-widest rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition-colors disabled:opacity-50">
+                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                                     PDF
                                 </button>
                             </div>

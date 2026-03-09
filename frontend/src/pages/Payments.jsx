@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import api from '../api';
 import toast from 'react-hot-toast';
 import Modal from '../components/ui/Modal';
@@ -11,8 +11,10 @@ import {
 import {
     Wallet, TrendingUp, CreditCard, Clock, ArrowDownCircle, Zap,
     ArrowUpRight, ArrowDownRight, Receipt, PieChart as PieIcon, Plus,
-    Trash2, Edit3, CheckCircle, AlertCircle, DollarSign
+    Trash2, Edit3, CheckCircle, AlertCircle, DollarSign, DownloadCloud
 } from 'lucide-react';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#0ea5e9', '#f43f5e', '#64748b'];
 const tooltipStyle = {
@@ -72,6 +74,7 @@ const Payments = () => {
     const { raw, metrics, graphs: fg, loading, refreshData } = useData();
     const { user } = useAuth();
     const [tab, setTab] = useState('overview');
+    const [selectedMonth, setSelectedMonth] = useState('all');
 
     // Modals & Forms
     const [paymentModal, setPaymentModal] = useState(false);
@@ -84,17 +87,11 @@ const Payments = () => {
     const [expForm, setExpForm] = useState(emptyExpense);
     const [founderForm, setFounderForm] = useState({ founderName: 'Sunil', amount: 0, date: '', note: '' });
 
-    if (loading || !metrics) return (
-        <div className="flex items-center justify-center h-[calc(100vh-100px)]">
-            <div className="w-14 h-14 rounded-full border-[3px] border-emerald-500 border-t-transparent animate-spin" />
-        </div>
-    );
-
-    const payments = raw.payments;
-    const expenses = raw.expenses;
-    const clients = raw.clients;
-    const projects = raw.projects;
-    const founderWithdrawals = raw.founderWithdrawals || [];
+    const payments = raw?.payments || [];
+    const expenses = raw?.expenses || [];
+    const clients = raw?.clients || [];
+    const projects = raw?.projects || [];
+    const founderWithdrawals = raw?.founderWithdrawals || [];
 
     // Payment CRUD
     const openPayAdd = () => { setPayForm({ client: '', project: '', totalAmount: 0, paidAmount: 0, paymentMode: 'UPI', paymentSource: 'Direct Client Payment', notes: '', transactionId: '', invoiceNumber: '', paymentDate: '', dueDate: '' }); setEditPayId(null); setPaymentModal(true); };
@@ -150,6 +147,42 @@ const Payments = () => {
     };
     const removeExp = async (id) => { if (!confirm('Delete this expense?')) return; await api.delete(`/expenses/${id}`); toast.success('Expense deleted'); refreshData(); };
 
+    // Month Logic
+    const monthOptions = useMemo(() => {
+        const dates = [];
+        payments.forEach(p => p.paymentDate && dates.push(new Date(p.paymentDate)));
+        expenses.forEach(e => e.date && dates.push(new Date(e.date)));
+        founderWithdrawals.forEach(w => w.date && dates.push(new Date(w.date)));
+
+        const map = {};
+        dates.forEach(d => {
+            if (!isNaN(d)) {
+                const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                const label = d.toLocaleString('default', { month: 'long', year: 'numeric' });
+                map[key] = label;
+            }
+        });
+        return Object.entries(map).sort((a, b) => b[0].localeCompare(a[0]));
+    }, [payments, expenses, founderWithdrawals]);
+
+    const filteredExpenses = useMemo(() => {
+        if (selectedMonth === 'all') return expenses;
+        return expenses.filter(e => {
+            if (!e.date) return false;
+            const d = new Date(e.date);
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` === selectedMonth;
+        });
+    }, [expenses, selectedMonth]);
+
+    const filteredFounderWithdrawals = useMemo(() => {
+        if (selectedMonth === 'all') return founderWithdrawals;
+        return founderWithdrawals.filter(w => {
+            if (!w.date) return false;
+            const d = new Date(w.date);
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` === selectedMonth;
+        });
+    }, [founderWithdrawals, selectedMonth]);
+
     // Founder CRUD
     const openFounderAdd = () => { setFounderForm({ founderName: 'Sunil', amount: 0, date: '', note: '' }); setEditFounderId(null); setFounderModal(true); };
     const openFounderEdit = (w) => {
@@ -196,6 +229,109 @@ const Payments = () => {
         return { ...p, displayTotal: dealAmount, displayRemaining: remaining, displayStatus: status };
     }).reverse();
 
+    const filteredProcessedPayments = useMemo(() => {
+        if (selectedMonth === 'all') return processedPayments;
+        return processedPayments.filter(p => {
+            if (!p.paymentDate) return false;
+            const d = new Date(p.paymentDate);
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` === selectedMonth;
+        });
+    }, [processedPayments, selectedMonth]);
+
+    const displayMetrics = useMemo(() => {
+        if (!metrics) return null;
+        if (selectedMonth === 'all') return metrics;
+        const rev = filteredProcessedPayments.reduce((s, p) => s + (p.paidAmount || 0), 0);
+        const exp = filteredExpenses.reduce((s, e) => s + (e.amount || 0), 0);
+        const profit = rev - exp;
+        const margin = rev > 0 ? parseFloat(((profit / rev) * 100).toFixed(1)) : 0;
+
+        return {
+            ...metrics,
+            totalRevenue: rev,
+            totalExpenses: exp,
+            netProfit: profit,
+            profitMargin: margin,
+        };
+    }, [filteredProcessedPayments, filteredExpenses, metrics, selectedMonth]);
+
+    if (loading || !metrics || !displayMetrics) return (
+        <div className="flex items-center justify-center h-[calc(100vh-100px)]">
+            <div className="w-14 h-14 rounded-full border-[3px] border-emerald-500 border-t-transparent animate-spin" />
+        </div>
+    );
+
+    const downloadMonthlyReport = () => {
+        const doc = new jsPDF();
+        doc.setFontSize(22);
+        doc.setTextColor(79, 70, 229);
+        doc.text('ForgeWeb LMS', 14, 22);
+
+        doc.setFontSize(16);
+        doc.setTextColor(30, 41, 59);
+        const reportTitle = selectedMonth === 'all' ? 'All-Time Financial Report' : `Financial Report - ${monthOptions.find(o => o[0] === selectedMonth)?.[1]}`;
+        doc.text(reportTitle, 14, 32);
+
+        doc.setFontSize(11);
+        doc.setTextColor(100, 116, 139);
+        doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 40);
+
+        doc.setDrawColor(226, 232, 240);
+        doc.line(14, 45, 196, 45);
+
+        doc.setFontSize(12);
+        doc.setTextColor(30, 41, 59);
+        doc.text(`Total Sales: Rs. ${displayMetrics.totalRevenue.toLocaleString()}`, 14, 55);
+        doc.text(`Total Expenses: Rs. ${displayMetrics.totalExpenses.toLocaleString()}`, 14, 65);
+        doc.text(`Net Profit: Rs. ${displayMetrics.netProfit.toLocaleString()}`, 14, 75);
+
+        const sunilShare = displayMetrics.netProfit * 0.5;
+        const sunilWithdrawn = filteredFounderWithdrawals.filter(w => w.founderName === 'Sunil').reduce((s, w) => s + w.amount, 0);
+        doc.text(`Sunil Share (50%): Rs. ${sunilShare.toLocaleString()}`, 14, 90);
+        doc.text(`  - Withdrawn: Rs. ${sunilWithdrawn.toLocaleString()}`, 14, 98);
+        doc.text(`  - Remaining: Rs. ${(sunilShare - sunilWithdrawn).toLocaleString()}`, 14, 106);
+
+        const aryanShare = displayMetrics.netProfit * 0.5;
+        const aryanWithdrawn = filteredFounderWithdrawals.filter(w => w.founderName === 'Aryan').reduce((s, w) => s + w.amount, 0);
+        doc.text(`Aryan Share (50%): Rs. ${aryanShare.toLocaleString()}`, 105, 90);
+        doc.text(`  - Withdrawn: Rs. ${aryanWithdrawn.toLocaleString()}`, 105, 98);
+        doc.text(`  - Remaining: Rs. ${(aryanShare - aryanWithdrawn).toLocaleString()}`, 105, 106);
+
+        // Sales Table
+        const salesRows = filteredProcessedPayments.map(p => [
+            p.paymentDate ? new Date(p.paymentDate).toLocaleDateString() : '—',
+            p.client?.name || '—',
+            p.totalAmount?.toLocaleString() || '0',
+            p.paidAmount?.toLocaleString() || '0',
+            p.paymentMode || '—'
+        ]);
+        doc.autoTable({
+            startY: 120,
+            head: [['Date', 'Client', 'Total Amount', 'Paid Amount', 'Mode']],
+            body: salesRows,
+            headStyles: { fillColor: [16, 185, 129] },
+            margin: { left: 14, right: 14 }
+        });
+
+        // Expenses Table
+        const expRows = filteredExpenses.map(e => [
+            e.date ? new Date(e.date).toLocaleDateString() : '—',
+            e.title || '—',
+            e.category || '—',
+            e.amount?.toLocaleString() || '0'
+        ]);
+        doc.autoTable({
+            startY: doc.lastAutoTable.finalY + 15,
+            head: [['Date', 'Title', 'Category', 'Amount']],
+            body: expRows,
+            headStyles: { fillColor: [239, 68, 68] },
+            margin: { left: 14, right: 14 }
+        });
+
+        doc.save(`Financial_Report_${selectedMonth.replace('-', '_')}.pdf`);
+        toast.success("Monthly Report Downloaded");
+    };
+
     const statusBadge = (s) => {
         const map = {
             'Paid': 'bg-emerald-50 text-emerald-600 border-emerald-100',
@@ -234,7 +370,23 @@ const Payments = () => {
                         </h1>
                         <p className="text-[13px] font-medium text-slate-400 mt-1">Revenue, expenses & cash flow intelligence</p>
                     </div>
-                    <div className="flex items-center gap-2.5">
+                    <div className="flex flex-wrap items-center gap-2.5 mt-4 sm:mt-0">
+                        <div className="flex bg-slate-50 border border-slate-200 rounded-xl overflow-hidden px-2">
+                            <span className="text-[11px] font-bold text-slate-400 self-center pl-2 uppercase tracking-wide">Month:</span>
+                            <select
+                                value={selectedMonth}
+                                onChange={e => setSelectedMonth(e.target.value)}
+                                className="bg-transparent border-none text-[12px] font-bold text-slate-700 py-2.5 px-3 cursor-pointer focus:ring-0 outline-none"
+                            >
+                                <option value="all">All Time</option>
+                                {monthOptions.map(([val, lbl]) => (
+                                    <option key={val} value={val}>{lbl}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <button onClick={downloadMonthlyReport} className="flex flex-col sm:flex-row items-center justify-center gap-1.5 px-3 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border border-indigo-200 text-[12px] font-bold rounded-xl transition-all" title="Download Monthly Report">
+                            <DownloadCloud className="w-4 h-4" /> <span className="hidden sm:inline">Export</span>
+                        </button>
                         <button onClick={openPayAdd} className="flex items-center gap-1.5 px-4 py-2.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 text-[12px] font-bold rounded-xl border border-emerald-200 transition-all">
                             <Plus className="w-3.5 h-3.5" /> Log Payment
                         </button>
@@ -247,10 +399,10 @@ const Payments = () => {
 
             {/* ─── 5 FINANCE KPI CARDS ─── */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                <FinanceCard label="Total Revenue" value={fmt(metrics.totalRevenue)} icon={Wallet} color="emerald" trend={metrics.revenueGrowth} />
-                <FinanceCard label="Expenses" value={fmt(metrics.totalExpenses)} icon={ArrowDownCircle} color="red" />
-                <FinanceCard label="Net Profit" value={fmt(metrics.netProfit)} icon={TrendingUp} color={metrics.netProfit >= 0 ? 'emerald' : 'rose'} sub={`${metrics.profitMargin}% margin`} />
-                <FinanceCard label="Pending" value={fmt(metrics.pendingPayments)} icon={Clock} color="amber" sub={metrics.overduePayments > 0 ? `₹${metrics.overduePayments.toLocaleString()} overdue` : 'No overdue'} />
+                <FinanceCard label="Total Revenue" value={fmt(displayMetrics.totalRevenue)} icon={Wallet} color="emerald" trend={selectedMonth === 'all' ? displayMetrics.revenueGrowth : null} />
+                <FinanceCard label="Expenses" value={fmt(displayMetrics.totalExpenses)} icon={ArrowDownCircle} color="red" />
+                <FinanceCard label="Net Profit" value={fmt(displayMetrics.netProfit)} icon={TrendingUp} color={displayMetrics.netProfit >= 0 ? 'emerald' : 'rose'} sub={`${displayMetrics.profitMargin}% margin`} />
+                <FinanceCard label="Pending" value={fmt(displayMetrics.pendingPayments)} icon={Clock} color="amber" sub={displayMetrics.overduePayments > 0 ? `₹${displayMetrics.overduePayments.toLocaleString()} overdue` : 'Overall Pending'} />
                 <FinanceCard label="This Month" value={fmt(metrics.thisMonthRevenue)} icon={DollarSign} color="indigo" />
             </div>
 
@@ -424,7 +576,7 @@ const Payments = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {processedPayments.map(p => (
+                                {filteredProcessedPayments.map(p => (
                                     <tr key={p._id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors group cursor-pointer" onClick={() => openPayEdit(p)}>
                                         <td className="px-5 py-3.5">
                                             <span className="font-bold text-[13px] text-slate-800">{p.client?.name || 'Unknown'}</span>
@@ -469,7 +621,7 @@ const Payments = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {expenses.map(e => (
+                                {filteredExpenses.map(e => (
                                     <tr key={e._id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors group cursor-pointer" onClick={() => openExpEdit(e)}>
                                         <td className="px-5 py-3.5"><span className="font-bold text-[13px] text-slate-800">{e.title}</span></td>
                                         <td className="px-5 py-3.5 text-[13px] font-extrabold text-red-500">₹{e.amount?.toLocaleString()}</td>
@@ -508,16 +660,16 @@ const Payments = () => {
                         <div className="bg-white rounded-[22px] p-6 border border-slate-100/80">
                             <h3 className="text-[16px] font-black text-slate-700 mb-5 flex justify-between items-center">
                                 <span>Sunil's Share (50%)</span>
-                                <span className="text-emerald-500 font-bold">{fmt(metrics.netProfit * 0.5)}</span>
+                                <span className="text-emerald-500 font-bold">{fmt(displayMetrics.netProfit * 0.5)}</span>
                             </h3>
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="p-4 bg-rose-50 rounded-xl border border-rose-100/50">
                                     <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">Withdrawn</p>
-                                    <p className="text-[18px] font-black text-rose-500">{fmt(founderWithdrawals.filter(w => w.founderName === 'Sunil').reduce((s, w) => s + w.amount, 0))}</p>
+                                    <p className="text-[18px] font-black text-rose-500">{fmt(filteredFounderWithdrawals.filter(w => w.founderName === 'Sunil').reduce((s, w) => s + w.amount, 0))}</p>
                                 </div>
                                 <div className="p-4 bg-indigo-50 rounded-xl border border-indigo-100/50">
                                     <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">Remaining</p>
-                                    <p className="text-[18px] font-black text-indigo-500">{fmt((metrics.netProfit * 0.5) - founderWithdrawals.filter(w => w.founderName === 'Sunil').reduce((s, w) => s + w.amount, 0))}</p>
+                                    <p className="text-[18px] font-black text-indigo-500">{fmt((displayMetrics.netProfit * 0.5) - filteredFounderWithdrawals.filter(w => w.founderName === 'Sunil').reduce((s, w) => s + w.amount, 0))}</p>
                                 </div>
                             </div>
                         </div>
@@ -526,16 +678,16 @@ const Payments = () => {
                         <div className="bg-white rounded-[22px] p-6 border border-slate-100/80">
                             <h3 className="text-[16px] font-black text-slate-700 mb-5 flex justify-between items-center">
                                 <span>Aryan's Share (50%)</span>
-                                <span className="text-emerald-500 font-bold">{fmt(metrics.netProfit * 0.5)}</span>
+                                <span className="text-emerald-500 font-bold">{fmt(displayMetrics.netProfit * 0.5)}</span>
                             </h3>
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="p-4 bg-rose-50 rounded-xl border border-rose-100/50">
                                     <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">Withdrawn</p>
-                                    <p className="text-[18px] font-black text-rose-500">{fmt(founderWithdrawals.filter(w => w.founderName === 'Aryan').reduce((s, w) => s + w.amount, 0))}</p>
+                                    <p className="text-[18px] font-black text-rose-500">{fmt(filteredFounderWithdrawals.filter(w => w.founderName === 'Aryan').reduce((s, w) => s + w.amount, 0))}</p>
                                 </div>
                                 <div className="p-4 bg-indigo-50 rounded-xl border border-indigo-100/50">
                                     <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">Remaining</p>
-                                    <p className="text-[18px] font-black text-indigo-500">{fmt((metrics.netProfit * 0.5) - founderWithdrawals.filter(w => w.founderName === 'Aryan').reduce((s, w) => s + w.amount, 0))}</p>
+                                    <p className="text-[18px] font-black text-indigo-500">{fmt((displayMetrics.netProfit * 0.5) - filteredFounderWithdrawals.filter(w => w.founderName === 'Aryan').reduce((s, w) => s + w.amount, 0))}</p>
                                 </div>
                             </div>
                         </div>
@@ -561,7 +713,7 @@ const Payments = () => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {founderWithdrawals.map(w => (
+                                    {filteredFounderWithdrawals.map(w => (
                                         <tr key={w._id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors group cursor-pointer" onClick={() => user?.role === 'admin' && openFounderEdit(w)}>
                                             <td className="px-5 py-3.5 text-[12px] font-medium text-slate-400">{w.date ? new Date(w.date).toLocaleDateString() : '—'}</td>
                                             <td className="px-5 py-3.5"><span className="font-bold text-[13px] text-slate-800">{w.founderName}</span></td>
