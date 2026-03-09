@@ -16,6 +16,7 @@ export const DataProvider = ({ children }) => {
     const [expenses, setExpenses] = useState([]);
     const [tasks, setTasks] = useState([]);
     const [recentActivities, setRecentActivities] = useState([]);
+    const [founderWithdrawals, setFounderWithdrawals] = useState([]);
 
     const [loading, setLoading] = useState(true);
 
@@ -23,13 +24,14 @@ export const DataProvider = ({ children }) => {
         if (!user) return;
         try {
             // Fetch all core entities + the stats route just for recent Activities if there's no dedicated route
-            const [leadsRes, clientsRes, projectsRes, paymentsRes, expensesRes, tasksRes, statsRes] = await Promise.all([
+            const [leadsRes, clientsRes, projectsRes, paymentsRes, expensesRes, tasksRes, founderWithdrawalsRes, statsRes] = await Promise.all([
                 api.get('/leads').catch(() => ({ data: [] })),
                 api.get('/clients').catch(() => ({ data: [] })),
                 api.get('/projects').catch(() => ({ data: [] })),
                 api.get('/payments').catch(() => ({ data: [] })),
                 api.get('/expenses').catch(() => ({ data: [] })),
                 api.get('/tasks').catch(() => ({ data: [] })),
+                api.get('/founder-withdrawals').catch(() => ({ data: [] })),
                 api.get('/dashboard/stats').catch(() => ({ data: { recentActivities: [] } }))
             ]);
 
@@ -39,6 +41,7 @@ export const DataProvider = ({ children }) => {
             setPayments(paymentsRes.data || []);
             setExpenses(expensesRes.data || []);
             setTasks(tasksRes.data || []);
+            setFounderWithdrawals(founderWithdrawalsRes.data || []);
 
             if (statsRes.data?.recentActivities) {
                 setRecentActivities(statsRes.data.recentActivities);
@@ -132,7 +135,7 @@ export const DataProvider = ({ children }) => {
             .slice(0, 5);
 
         return {
-            raw: { leads, clients, projects, payments, expenses, tasks, recentActivities },
+            raw: { leads, clients, projects, payments, expenses, tasks, recentActivities, founderWithdrawals },
             metrics,
             graphs: {
                 monthlyData,
@@ -149,7 +152,7 @@ export const DataProvider = ({ children }) => {
             loading,
             refreshData
         };
-    }, [leads, clients, projects, payments, expenses, tasks, recentActivities, loading, refreshData]);
+    }, [leads, clients, projects, payments, expenses, tasks, recentActivities, founderWithdrawals, loading, refreshData]);
 
     return (
         <DataContext.Provider value={store}>

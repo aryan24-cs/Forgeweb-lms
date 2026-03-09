@@ -13,6 +13,7 @@ import taskRoutes from './routes/tasks.js';
 import dashboardRoutes from './routes/dashboard.js';
 import settingsRoutes from './routes/settings.js';
 import expenseRoutes from './routes/expenses.js';
+import founderWithdrawalRoutes from './routes/founderWithdrawals.js';
 import './utils/cron.js';
 
 dotenv.config();
@@ -89,6 +90,7 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/expenses', expenseRoutes);
+app.use('/api/founder-withdrawals', founderWithdrawalRoutes);
 
 if (process.env.NODE_ENV !== 'production') {
     app.listen(PORT, '0.0.0.0', () => console.log(`Server running on port ${PORT}`));

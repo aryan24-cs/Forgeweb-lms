@@ -3,6 +3,7 @@ import api from '../api';
 import toast from 'react-hot-toast';
 import Modal from '../components/ui/Modal';
 import { useData } from '../context/DataContext';
+import { useAuth } from '../context/AuthContext';
 import {
     AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     PieChart, Pie, Cell, Legend, LineChart, Line
@@ -69,15 +70,19 @@ const FinanceCard = ({ label, value, icon: Icon, color = 'indigo', trend, sub })
 
 const Payments = () => {
     const { raw, metrics, graphs: fg, loading, refreshData } = useData();
+    const { user } = useAuth();
     const [tab, setTab] = useState('overview');
 
     // Modals & Forms
     const [paymentModal, setPaymentModal] = useState(false);
     const [expenseModal, setExpenseModal] = useState(false);
+    const [founderModal, setFounderModal] = useState(false);
     const [editPayId, setEditPayId] = useState(null);
     const [editExpId, setEditExpId] = useState(null);
+    const [editFounderId, setEditFounderId] = useState(null);
     const [payForm, setPayForm] = useState({ client: '', project: '', totalAmount: 0, paidAmount: 0, paymentMode: 'UPI', paymentSource: 'Direct Client Payment', notes: '', transactionId: '', invoiceNumber: '', paymentDate: '', dueDate: '' });
     const [expForm, setExpForm] = useState(emptyExpense);
+    const [founderForm, setFounderForm] = useState({ founderName: 'Sunil', amount: 0, date: '', note: '' });
 
     if (loading || !metrics) return (
         <div className="flex items-center justify-center h-[calc(100vh-100px)]">
@@ -89,6 +94,7 @@ const Payments = () => {
     const expenses = raw.expenses;
     const clients = raw.clients;
     const projects = raw.projects;
+    const founderWithdrawals = raw.founderWithdrawals || [];
 
     // Payment CRUD
     const openPayAdd = () => { setPayForm({ client: '', project: '', totalAmount: 0, paidAmount: 0, paymentMode: 'UPI', paymentSource: 'Direct Client Payment', notes: '', transactionId: '', invoiceNumber: '', paymentDate: '', dueDate: '' }); setEditPayId(null); setPaymentModal(true); };
@@ -144,6 +150,30 @@ const Payments = () => {
     };
     const removeExp = async (id) => { if (!confirm('Delete this expense?')) return; await api.delete(`/expenses/${id}`); toast.success('Expense deleted'); refreshData(); };
 
+    // Founder CRUD
+    const openFounderAdd = () => { setFounderForm({ founderName: 'Sunil', amount: 0, date: '', note: '' }); setEditFounderId(null); setFounderModal(true); };
+    const openFounderEdit = (w) => {
+        setFounderForm({ ...w, date: w.date?.slice(0, 10) || '' });
+        setEditFounderId(w._id); setFounderModal(true);
+    };
+    const saveFounder = async (e) => {
+        e.preventDefault();
+        try {
+            const payload = { ...founderForm };
+            if (!payload.date) delete payload.date;
+
+            if (editFounderId) await api.put(`/founder-withdrawals/${editFounderId}`, payload);
+            else await api.post('/founder-withdrawals', payload);
+            toast.success(editFounderId ? 'Withdrawal updated' : 'Withdrawal recorded');
+            setFounderModal(false);
+            refreshData();
+        } catch (err) {
+            console.error(err);
+            toast.error(err.response?.data?.message || 'Failed to save withdrawal');
+        }
+    };
+    const removeFounder = async (id) => { if (!confirm('Delete this withdrawal?')) return; await api.delete(`/founder-withdrawals/${id}`); toast.success('Withdrawal deleted'); refreshData(); };
+
     const processedPayments = [...payments].reverse().map((p, _, arr) => {
         const cId = p.client?._id || 'unknown';
         const cAll = arr.filter(cp => (cp.client?._id || 'unknown') === cId);
@@ -188,6 +218,7 @@ const Payments = () => {
         { id: 'overview', label: 'Overview', icon: PieIcon },
         { id: 'payments', label: 'Payments', icon: CreditCard },
         { id: 'expenses', label: 'Expenses', icon: ArrowDownCircle },
+        { id: 'founder', label: 'Founder Profit', icon: Wallet },
     ];
 
     return (
@@ -468,6 +499,94 @@ const Payments = () => {
                 </div>
             )}
 
+            {/* ═══ FOUNDER TAB ═══ */}
+            {tab === 'founder' && (
+                <div className="space-y-6 animate-slideIn">
+                    {/* Dashboard Display */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                        {/* Sunil Panel */}
+                        <div className="bg-white rounded-[22px] p-6 border border-slate-100/80">
+                            <h3 className="text-[16px] font-black text-slate-700 mb-5 flex justify-between items-center">
+                                <span>Sunil's Share (50%)</span>
+                                <span className="text-emerald-500 font-bold">{fmt(metrics.netProfit * 0.5)}</span>
+                            </h3>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="p-4 bg-rose-50 rounded-xl border border-rose-100/50">
+                                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">Withdrawn</p>
+                                    <p className="text-[18px] font-black text-rose-500">{fmt(founderWithdrawals.filter(w => w.founderName === 'Sunil').reduce((s, w) => s + w.amount, 0))}</p>
+                                </div>
+                                <div className="p-4 bg-indigo-50 rounded-xl border border-indigo-100/50">
+                                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">Remaining</p>
+                                    <p className="text-[18px] font-black text-indigo-500">{fmt((metrics.netProfit * 0.5) - founderWithdrawals.filter(w => w.founderName === 'Sunil').reduce((s, w) => s + w.amount, 0))}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Aryan Panel */}
+                        <div className="bg-white rounded-[22px] p-6 border border-slate-100/80">
+                            <h3 className="text-[16px] font-black text-slate-700 mb-5 flex justify-between items-center">
+                                <span>Aryan's Share (50%)</span>
+                                <span className="text-emerald-500 font-bold">{fmt(metrics.netProfit * 0.5)}</span>
+                            </h3>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="p-4 bg-rose-50 rounded-xl border border-rose-100/50">
+                                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">Withdrawn</p>
+                                    <p className="text-[18px] font-black text-rose-500">{fmt(founderWithdrawals.filter(w => w.founderName === 'Aryan').reduce((s, w) => s + w.amount, 0))}</p>
+                                </div>
+                                <div className="p-4 bg-indigo-50 rounded-xl border border-indigo-100/50">
+                                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">Remaining</p>
+                                    <p className="text-[18px] font-black text-indigo-500">{fmt((metrics.netProfit * 0.5) - founderWithdrawals.filter(w => w.founderName === 'Aryan').reduce((s, w) => s + w.amount, 0))}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Withdrawal History */}
+                    <div className="bg-white rounded-[22px] overflow-hidden border border-slate-100/80">
+                        <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center">
+                            <h3 className="text-[14px] font-black text-slate-700">Withdrawal History</h3>
+                            {user?.role === 'admin' && (
+                                <button onClick={openFounderAdd} className="flex items-center gap-1.5 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border border-indigo-200 text-[12px] font-bold rounded-xl transition-all">
+                                    <Plus className="w-3.5 h-3.5" /> Add Withdrawal
+                                </button>
+                            )}
+                        </div>
+                        <div className="overflow-x-auto">
+                            <table className="w-full">
+                                <thead>
+                                    <tr className="bg-slate-50/80 border-b border-slate-100">
+                                        {['Date', 'Founder', 'Amount', 'Note', 'Added By', ''].map(h => (
+                                            <th key={h} className="text-left px-5 py-3.5 text-[10px] font-black text-slate-400 uppercase tracking-widest">{h}</th>
+                                        ))}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {founderWithdrawals.map(w => (
+                                        <tr key={w._id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors group cursor-pointer" onClick={() => user?.role === 'admin' && openFounderEdit(w)}>
+                                            <td className="px-5 py-3.5 text-[12px] font-medium text-slate-400">{w.date ? new Date(w.date).toLocaleDateString() : '—'}</td>
+                                            <td className="px-5 py-3.5"><span className="font-bold text-[13px] text-slate-800">{w.founderName}</span></td>
+                                            <td className="px-5 py-3.5 text-[13px] font-extrabold text-indigo-600">₹{w.amount?.toLocaleString()}</td>
+                                            <td className="px-5 py-3.5 text-[12px] font-medium text-slate-500">{w.note || '—'}</td>
+                                            <td className="px-5 py-3.5 text-[12px] font-medium text-slate-500">{w.addedBy?.name || '—'}</td>
+                                            <td className="px-5 py-3.5">
+                                                {user?.role === 'admin' && (
+                                                    <button onClick={(ev) => { ev.stopPropagation(); removeFounder(w._id); }} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-500 transition opacity-0 group-hover:opacity-100">
+                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                    </button>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {founderWithdrawals.length === 0 && (
+                                        <tr><td colSpan="6" className="text-center py-16 text-slate-400 text-[13px] font-medium">No withdrawals recorded yet</td></tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* ─── PAYMENT MODAL ─── */}
             <Modal isOpen={paymentModal} onClose={() => setPaymentModal(false)} title={editPayId ? 'Edit Payment' : 'Record Payment'} maxWidth="max-w-2xl"
                 footer={<>
@@ -533,6 +652,27 @@ const Payments = () => {
                         )}
                     </div>
                     <div><label className={label}>Description</label><textarea rows={2} value={expForm.description} onChange={e => setExpForm({ ...expForm, description: e.target.value })} className="fw-input resize-y" placeholder="Optional notes..." /></div>
+                </form>
+            </Modal>
+
+            {/* ─── FOUNDER WITHDRAWAL MODAL ─── */}
+            <Modal isOpen={founderModal} onClose={() => setFounderModal(false)} title={editFounderId ? 'Edit Withdrawal' : 'Add Withdrawal'} maxWidth="max-w-md"
+                footer={<>
+                    <button type="button" onClick={() => setFounderModal(false)} className="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-[13px] font-bold text-slate-600 transition">Cancel</button>
+                    <button type="submit" form="founder-form" className="px-5 py-2.5 bg-indigo-500 hover:bg-indigo-600 text-white text-[13px] font-bold rounded-xl shadow-[0_8px_20px_-4px_rgba(99,102,241,0.25)] transition">{editFounderId ? 'Update' : 'Save'}</button>
+                </>}
+            >
+                <form id="founder-form" onSubmit={saveFounder} className="space-y-5">
+                    <div>
+                        <label className={label}>Founder Name *</label>
+                        <select required value={founderForm.founderName} onChange={e => setFounderForm({ ...founderForm, founderName: e.target.value })} className="fw-input cursor-pointer">
+                            <option value="Sunil">Sunil</option>
+                            <option value="Aryan">Aryan</option>
+                        </select>
+                    </div>
+                    <div><label className={label}>Amount (₹) *</label><input type="number" required value={founderForm.amount} onChange={e => setFounderForm({ ...founderForm, amount: Number(e.target.value) })} className="fw-input font-bold text-indigo-600" /></div>
+                    <div><label className={label}>Date</label><input type="date" value={founderForm.date} onChange={e => setFounderForm({ ...founderForm, date: e.target.value })} className="fw-input cursor-pointer" /></div>
+                    <div><label className={label}>Note / Description</label><textarea rows={2} value={founderForm.note} onChange={e => setFounderForm({ ...founderForm, note: e.target.value })} className="fw-input resize-y" placeholder="Optional notes..." /></div>
                 </form>
             </Modal>
         </div>
