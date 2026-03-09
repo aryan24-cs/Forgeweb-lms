@@ -14,6 +14,7 @@ const expenseSchema = new mongoose.Schema({
     recurringInterval: { type: String, enum: ['Monthly', 'Quarterly', 'Yearly', 'None'], default: 'None' },
     vendor: { type: String, default: '' },
     receipt: { type: String, default: '' },
+    paidBy: { type: String, default: '' },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 }, { timestamps: true });
 

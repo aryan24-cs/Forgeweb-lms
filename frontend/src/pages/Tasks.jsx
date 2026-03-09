@@ -50,12 +50,21 @@ const Tasks = () => {
     const save = async (e) => {
         e.preventDefault();
         try {
-            if (editId) await api.put(`/tasks/${editId}`, form);
-            else await api.post('/tasks', form);
+            const payload = { ...form };
+            if (!payload.assignedTo) delete payload.assignedTo;
+            if (!payload.relatedProject) delete payload.relatedProject;
+            if (!payload.relatedClient) delete payload.relatedClient;
+            if (!payload.dueDate) delete payload.dueDate;
+
+            if (editId) await api.put(`/tasks/${editId}`, payload);
+            else await api.post('/tasks', payload);
             toast.success(editId ? 'Task objective updated' : 'New objective locked');
             setModal(false);
             refreshData();
-        } catch { toast.error('Failed modifying objective'); }
+        } catch (err) {
+            console.error(err);
+            toast.error(err.response?.data?.message || 'Failed modifying objective');
+        }
     };
 
     const remove = async (id) => {

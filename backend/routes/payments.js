@@ -15,8 +15,34 @@ router.get('/', auth, async (req, res) => {
             const end = new Date(year, month, 0, 23, 59, 59);
             filter.createdAt = { $gte: start, $lte: end };
         }
-        const payments = await Payment.find(filter).populate('client', 'name businessName').populate('project', 'name').sort('-createdAt');
-        res.json(payments);
+        const payments = await Payment.find(filter).populate('client', 'name businessName totalDealValue').populate('project', 'name').sort('-createdAt');
+
+        const clientTotals = {};
+        payments.forEach(p => {
+            if (p.client && !clientTotals[p.client._id]) {
+                const cPayments = payments.filter(cp => cp.client && cp.client._id.toString() === p.client._id.toString());
+                const totalPaid = cPayments.reduce((s, cp) => s + (cp.paidAmount || 0), 0);
+                const oldTotal = cPayments.length > 0 ? Math.max(...cPayments.map(cp => cp.totalAmount || 0)) : 0;
+                const dealAmount = Math.max(p.client.totalDealValue || 0, oldTotal);
+                clientTotals[p.client._id] = { dealAmount, totalPaid };
+            }
+        });
+
+        const formattedPayments = payments.map(p => {
+            const pObj = p.toObject ? p.toObject() : p;
+            if (p.client && clientTotals[p.client._id]) {
+                pObj.totalAmount = clientTotals[p.client._id].dealAmount;
+                pObj.remainingAmount = Math.max(0, clientTotals[p.client._id].dealAmount - clientTotals[p.client._id].totalPaid);
+                if (clientTotals[p.client._id].dealAmount > 0) {
+                    if (pObj.remainingAmount === 0) pObj.status = 'Paid';
+                    else if (pObj.remainingAmount > 0 && clientTotals[p.client._id].totalPaid > 0) pObj.status = 'Partial';
+                    else pObj.status = 'Pending';
+                }
+            }
+            return pObj;
+        });
+
+        res.json(formattedPayments);
     } catch (err) {
         if (err.name === 'ValidationError') return res.status(400).json({ message: err.message });
         res.status(500).json({ message: err.message });

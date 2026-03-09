@@ -25,7 +25,7 @@ const tooltipStyle = {
     padding: '12px 16px',
 };
 
-const emptyExpense = { title: '', amount: 0, category: 'Other', description: '', date: '', recurring: false, recurringInterval: 'None', vendor: '' };
+const emptyExpense = { title: '', amount: 0, category: 'Other', description: '', date: '', recurring: false, recurringInterval: 'None', vendor: '', paidBy: '' };
 const CATEGORIES = ['Developer Payout', 'Hosting', 'Marketing', 'Software', 'Office', 'Travel', 'Other'];
 
 const fmt = (val) => {
@@ -76,7 +76,7 @@ const Payments = () => {
     const [expenseModal, setExpenseModal] = useState(false);
     const [editPayId, setEditPayId] = useState(null);
     const [editExpId, setEditExpId] = useState(null);
-    const [payForm, setPayForm] = useState({ client: '', project: '', totalAmount: 0, paidAmount: 0, paymentMode: 'UPI', transactionId: '', invoiceNumber: '', paymentDate: '', dueDate: '' });
+    const [payForm, setPayForm] = useState({ client: '', project: '', totalAmount: 0, paidAmount: 0, paymentMode: 'UPI', paymentSource: 'Direct Client Payment', notes: '', transactionId: '', invoiceNumber: '', paymentDate: '', dueDate: '' });
     const [expForm, setExpForm] = useState(emptyExpense);
 
     if (loading || !metrics) return (
@@ -91,7 +91,7 @@ const Payments = () => {
     const projects = raw.projects;
 
     // Payment CRUD
-    const openPayAdd = () => { setPayForm({ client: '', project: '', totalAmount: 0, paidAmount: 0, paymentMode: 'UPI', transactionId: '', invoiceNumber: '', paymentDate: '', dueDate: '' }); setEditPayId(null); setPaymentModal(true); };
+    const openPayAdd = () => { setPayForm({ client: '', project: '', totalAmount: 0, paidAmount: 0, paymentMode: 'UPI', paymentSource: 'Direct Client Payment', notes: '', transactionId: '', invoiceNumber: '', paymentDate: '', dueDate: '' }); setEditPayId(null); setPaymentModal(true); };
     const openPayEdit = (p) => {
         setPayForm({ ...p, client: p.client?._id || '', project: p.project?._id || '', paymentDate: p.paymentDate?.slice(0, 10) || '', dueDate: p.dueDate?.slice(0, 10) || '' });
         setEditPayId(p._id); setPaymentModal(true);
@@ -143,6 +143,28 @@ const Payments = () => {
         }
     };
     const removeExp = async (id) => { if (!confirm('Delete this expense?')) return; await api.delete(`/expenses/${id}`); toast.success('Expense deleted'); refreshData(); };
+
+    const processedPayments = [...payments].reverse().map((p, _, arr) => {
+        const cId = p.client?._id || 'unknown';
+        const cAll = arr.filter(cp => (cp.client?._id || 'unknown') === cId);
+
+        // Find index of current payment in chronological order
+        const currentIndex = cAll.findIndex(cp => cp._id === p._id);
+        const cPrevious = cAll.slice(0, currentIndex + 1); // including current
+
+        const dealAmount = Math.max(p.client?.totalDealValue || 0, Math.max(...cAll.map(cp => cp.totalAmount || 0), 0));
+        const runningPaid = cPrevious.reduce((s, cp) => s + (cp.paidAmount || 0), 0);
+
+        const remaining = Math.max(0, dealAmount - runningPaid);
+        let status = p.status;
+        if (dealAmount > 0) {
+            if (remaining === 0) status = 'Paid';
+            else if (runningPaid > 0) status = 'Partial';
+            else status = 'Pending';
+        }
+
+        return { ...p, displayTotal: dealAmount, displayRemaining: remaining, displayStatus: status };
+    }).reverse();
 
     const statusBadge = (s) => {
         const map = {
@@ -371,20 +393,20 @@ const Payments = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {payments.map(p => (
+                                {processedPayments.map(p => (
                                     <tr key={p._id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors group cursor-pointer" onClick={() => openPayEdit(p)}>
                                         <td className="px-5 py-3.5">
                                             <span className="font-bold text-[13px] text-slate-800">{p.client?.name || 'Unknown'}</span>
                                         </td>
-                                        <td className="px-5 py-3.5 text-[13px] font-semibold text-slate-500">₹{p.totalAmount?.toLocaleString()}</td>
+                                        <td className="px-5 py-3.5 text-[13px] font-semibold text-slate-500">₹{p.displayTotal?.toLocaleString()}</td>
                                         <td className="px-5 py-3.5 text-[13px] font-extrabold text-emerald-600">₹{p.paidAmount?.toLocaleString()}</td>
-                                        <td className="px-5 py-3.5 text-[13px] font-bold text-red-500">₹{p.remainingAmount?.toLocaleString()}</td>
+                                        <td className="px-5 py-3.5 text-[13px] font-bold text-red-500">₹{p.displayRemaining?.toLocaleString()}</td>
                                         <td className="px-5 py-3.5">
                                             <span className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-slate-50 text-slate-500 border border-slate-100">{p.paymentMode}</span>
                                         </td>
                                         <td className="px-5 py-3.5">
-                                            <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-lg border ${statusBadge(p.status)}`}>
-                                                {statusIcon(p.status)} {p.status}
+                                            <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-lg border ${statusBadge(p.displayStatus)}`}>
+                                                {statusIcon(p.displayStatus)} {p.displayStatus}
                                             </span>
                                         </td>
                                         <td className="px-5 py-3.5">
@@ -464,6 +486,10 @@ const Payments = () => {
                         <div><label className={label}>Payment Mode</label><select value={payForm.paymentMode} onChange={e => setPayForm({ ...payForm, paymentMode: e.target.value })} className="fw-input cursor-pointer"><option>UPI</option><option>Bank Transfer</option><option>Cash</option><option>Cheque</option><option>Other</option></select></div>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div><label className={label}>Payment Source</label><select value={payForm.paymentSource} onChange={e => setPayForm({ ...payForm, paymentSource: e.target.value })} className="fw-input cursor-pointer"><option>Direct Client Payment</option><option>Received via Team Member / Third Person</option></select></div>
+                        <div><label className={label}>Notes</label><input value={payForm.notes || ''} onChange={e => setPayForm({ ...payForm, notes: e.target.value })} className="fw-input" placeholder="Optional notes..." /></div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div><label className={label}>Payment Date</label><input type="date" value={payForm.paymentDate} onChange={e => setPayForm({ ...payForm, paymentDate: e.target.value })} className="fw-input cursor-pointer" /></div>
                         <div><label className={label}>Due Date</label><input type="date" value={payForm.dueDate} onChange={e => setPayForm({ ...payForm, dueDate: e.target.value })} className="fw-input cursor-pointer" /></div>
                     </div>
@@ -491,6 +517,7 @@ const Payments = () => {
                         <div><label className={label}>Date</label><input type="date" value={expForm.date} onChange={e => setExpForm({ ...expForm, date: e.target.value })} className="fw-input cursor-pointer" /></div>
                         <div><label className={label}>Vendor</label><input value={expForm.vendor} onChange={e => setExpForm({ ...expForm, vendor: e.target.value })} className="fw-input" placeholder="e.g. Amazon" /></div>
                     </div>
+                    <div><label className={label}>Paid By (Optional)</label><input value={expForm.paidBy || ''} onChange={e => setExpForm({ ...expForm, paidBy: e.target.value })} className="fw-input" placeholder="e.g. John Doe" /></div>
                     <div className="bg-slate-50 rounded-xl border border-slate-100 p-4">
                         <label className="flex items-center gap-3 cursor-pointer text-[13px] font-bold text-slate-700">
                             <input type="checkbox" checked={expForm.recurring} onChange={e => setExpForm({ ...expForm, recurring: e.target.checked })} className="w-4 h-4 rounded border-slate-300 text-indigo-600 cursor-pointer" />

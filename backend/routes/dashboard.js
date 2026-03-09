@@ -84,15 +84,33 @@ const calcCoreMetrics = (clients, leads, projects, payments, expenses, tasks, no
     const netProfit = totalRevenue - totalExpenses;
     const profitMargin = totalRevenue > 0 ? parseFloat(((netProfit / totalRevenue) * 100).toFixed(1)) : 0;
 
-    const pendingPayments = payments
-        .filter(p => p.status !== 'Paid')
-        .reduce((s, p) => s + (p.remainingAmount || 0), 0);
+    const totalBilled = clients.reduce((s, c) => {
+        const cId = c._id?.toString();
+        const cPayments = payments.filter(p => {
+            const pId = p.client?._id?.toString() || p.client?.toString();
+            return pId === cId;
+        });
+        const oldTotal = cPayments.length > 0 ? Math.max(...cPayments.map(p => p.totalAmount || 0)) : 0;
+        return s + Math.max(c.totalDealValue || 0, oldTotal);
+    }, 0);
+
+    let pendingPayments = 0;
+    clients.forEach(c => {
+        const cId = c._id?.toString();
+        const cPayments = payments.filter(p => {
+            const pId = p.client?._id?.toString() || p.client?.toString();
+            return pId === cId;
+        });
+        const totalPaid = sumField(cPayments, 'paidAmount');
+        const oldTotal = cPayments.length > 0 ? Math.max(...cPayments.map(p => p.totalAmount || 0)) : 0;
+        const dealAmount = Math.max(c.totalDealValue || 0, oldTotal);
+        const pending = dealAmount - totalPaid;
+        if (pending > 0) pendingPayments += pending;
+    });
 
     const overduePayments = payments
         .filter(p => p.status === 'Overdue')
-        .reduce((s, p) => s + (p.remainingAmount || 0), 0);
-
-    const totalBilled = sumField(payments, 'totalAmount');
+        .reduce((s, p) => s + (p.paidAmount || 0), 0);
     const collectionRate = totalBilled > 0 ? parseFloat(((totalRevenue / totalBilled) * 100).toFixed(1)) : 0;
     const avgDealValue = totalClients > 0 ? Math.round(clients.reduce((s, c) => s + (c.totalDealValue || 0), 0) / totalClients) : 0;
 

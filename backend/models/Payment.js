@@ -3,10 +3,12 @@ import mongoose from 'mongoose';
 const paymentSchema = new mongoose.Schema({
     client: { type: mongoose.Schema.Types.ObjectId, ref: 'Client', required: true },
     project: { type: mongoose.Schema.Types.ObjectId, ref: 'Project' },
-    totalAmount: { type: Number, required: true },
+    totalAmount: { type: Number, default: 0 },
     paidAmount: { type: Number, default: 0 },
     remainingAmount: { type: Number, default: 0 },
     paymentMode: { type: String, enum: ['UPI', 'Bank Transfer', 'Cash', 'Cheque', 'Other'], default: 'UPI' },
+    paymentSource: { type: String, enum: ['Direct Client Payment', 'Received via Team Member / Third Person'], default: 'Direct Client Payment' },
+    notes: { type: String, default: '' },
     transactionId: { type: String, default: '' },
     invoiceNumber: { type: String, default: '' },
     paymentDate: { type: Date },
