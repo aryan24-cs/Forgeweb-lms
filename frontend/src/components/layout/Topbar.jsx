@@ -4,7 +4,7 @@ import { useData } from '../../context/DataContext';
 import { useNavigate } from 'react-router-dom';
 
 const Topbar = () => {
-    const { user } = useAuth();
+    const { user, logout } = useAuth();
     const { raw } = useData();
     const navigate = useNavigate();
 
@@ -66,7 +66,7 @@ const Topbar = () => {
 
                     {/* Search Dropdown */}
                     {showDropdown && search && (
-                        <div className="absolute top-[calc(100%+8px)] left-0 w-[400px] bg-white rounded-2xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.2)] border border-slate-100 overflow-hidden z-50 animate-slideIn">
+                        <div className="absolute top-[calc(100%+8px)] left-0 w-[calc(100vw-4rem)] sm:w-[400px] max-w-[400px] bg-white rounded-2xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.2)] border border-slate-100 overflow-hidden z-50 animate-slideIn">
                             {hasResults ? (
                                 <div className="max-h-[400px] overflow-y-auto p-2">
                                     {/* Clients */}

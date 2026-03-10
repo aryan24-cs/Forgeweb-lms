@@ -27,14 +27,14 @@ const Login = () => {
     return (
         <div className="min-h-screen flex bg-white text-slate-900">
             {/* Left side - Login Form */}
-            <div className="w-full lg flex items-center justify-center p-8 lg relative z-10">
+            <div className="w-full lg:w-1/2 flex items-center justify-center p-8 relative z-10">
                 <div className="w-full max-w-[420px] animate-slideIn">
                     {/* Logo Section */}
-                    <div className="mb-10 lg ">
+                    <div className="mb-10 lg:mb-12">
                         <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-indigo-600 text-white text-xl font-black mb-6 shadow-xl shadow-indigo-600/20">
                             FW
                         </div>
-                        <h1 className="text-3xl sm font-black tracking-tight mb-2 text-slate-800">Welcome Back</h1>
+                        <h1 className="text-3xl sm:text-4xl font-black tracking-tight mb-2 text-slate-800">Welcome Back</h1>
                         <p className="text-slate-500 font-medium">Please enter your details to sign in.</p>
                     </div>
 
@@ -62,7 +62,7 @@ const Login = () => {
                         <div>
                             <div className="flex items-center justify-between mb-2">
                                 <label className="block text-sm font-bold text-slate-700">Password</label>
-                                <a href="#" className="text-sm font-semibold text-indigo-600 hover transition-colors">Forgot password?</a>
+                                <a href="#" className="text-sm font-semibold text-indigo-600 hover:text-indigo-700 transition-colors">Forgot password?</a>
                             </div>
                             <input
                                 type="password"
@@ -77,7 +77,7 @@ const Login = () => {
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full py-4 bg-indigo-600 hover text-white font-bold rounded-xl transition-all duration-300 shadow-[0_8px_20px_-4px_rgba(79,70,229,0.3)] hover _12px_24px_-6px_rgba(79,70,229,0.4)] hover .5 disabled disabled  text-base flex items-center justify-center gap-2"
+                            className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-all duration-300 shadow-[0_8px_20px_-4px_rgba(79,70,229,0.3)] hover:shadow-[0_12px_24px_-6px_rgba(79,70,229,0.4)] hover:-translate-y-0.5 disabled:opacity-75 disabled:cursor-not-allowed text-base flex items-center justify-center gap-2"
                         >
                             {loading ? (
                                 <>
@@ -99,7 +99,7 @@ const Login = () => {
             </div>
 
             {/* Right side - Decoration */}
-            <div className="hidden lg w-1/2 bg-slate-50/50 border-l border-slate-200/50 items-center justify-center relative overflow-hidden">
+            <div className="hidden lg:flex w-1/2 bg-slate-50/50 border-l border-slate-200/50 items-center justify-center relative overflow-hidden">
                 {/* Visual Interest Backgrounds */}
                 <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-indigo-200/40 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/3"></div>
                 <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-sky-200/40 rounded-full blur-[100px] translate-y-1/3 -translate-x-1/3"></div>

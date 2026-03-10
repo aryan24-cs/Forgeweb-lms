@@ -11,10 +11,8 @@ import {
 import {
     Wallet, TrendingUp, CreditCard, Clock, ArrowDownCircle, Zap,
     ArrowUpRight, ArrowDownRight, Receipt, PieChart as PieIcon, Plus,
-    Trash2, Edit3, CheckCircle, AlertCircle, DollarSign, DownloadCloud
+    Trash2, Edit3, CheckCircle, AlertCircle, DollarSign
 } from 'lucide-react';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
 
 const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#0ea5e9', '#f43f5e', '#64748b'];
 const tooltipStyle = {
@@ -240,11 +238,24 @@ const Payments = () => {
 
     const displayMetrics = useMemo(() => {
         if (!metrics) return null;
-        if (selectedMonth === 'all') return metrics;
-        const rev = filteredProcessedPayments.reduce((s, p) => s + (p.paidAmount || 0), 0);
-        const exp = filteredExpenses.reduce((s, e) => s + (e.amount || 0), 0);
-        const profit = rev - exp;
-        const margin = rev > 0 ? parseFloat(((profit / rev) * 100).toFixed(1)) : 0;
+
+        let rev, exp, profit, margin, cashInHand, bankBalance;
+
+        if (selectedMonth === 'all') {
+            rev = metrics.totalRevenue;
+            exp = metrics.totalExpenses;
+            profit = metrics.netProfit;
+            margin = metrics.profitMargin;
+            cashInHand = founderWithdrawals.reduce((s, w) => s + w.amount, 0);
+        } else {
+            rev = filteredProcessedPayments.reduce((s, p) => s + (p.paidAmount || 0), 0);
+            exp = filteredExpenses.reduce((s, e) => s + (e.amount || 0), 0);
+            profit = rev - exp;
+            margin = rev > 0 ? parseFloat(((profit / rev) * 100).toFixed(1)) : 0;
+            cashInHand = filteredFounderWithdrawals.reduce((s, w) => s + w.amount, 0);
+        }
+
+        bankBalance = rev - exp - cashInHand;
 
         return {
             ...metrics,
@@ -252,8 +263,10 @@ const Payments = () => {
             totalExpenses: exp,
             netProfit: profit,
             profitMargin: margin,
+            cashInHand,
+            bankBalance
         };
-    }, [filteredProcessedPayments, filteredExpenses, metrics, selectedMonth]);
+    }, [filteredProcessedPayments, filteredExpenses, filteredFounderWithdrawals, founderWithdrawals, metrics, selectedMonth]);
 
     if (loading || !metrics || !displayMetrics) return (
         <div className="flex items-center justify-center h-[calc(100vh-100px)]">
@@ -261,76 +274,6 @@ const Payments = () => {
         </div>
     );
 
-    const downloadMonthlyReport = () => {
-        const doc = new jsPDF();
-        doc.setFontSize(22);
-        doc.setTextColor(79, 70, 229);
-        doc.text('ForgeWeb LMS', 14, 22);
-
-        doc.setFontSize(16);
-        doc.setTextColor(30, 41, 59);
-        const reportTitle = selectedMonth === 'all' ? 'All-Time Financial Report' : `Financial Report - ${monthOptions.find(o => o[0] === selectedMonth)?.[1]}`;
-        doc.text(reportTitle, 14, 32);
-
-        doc.setFontSize(11);
-        doc.setTextColor(100, 116, 139);
-        doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 40);
-
-        doc.setDrawColor(226, 232, 240);
-        doc.line(14, 45, 196, 45);
-
-        doc.setFontSize(12);
-        doc.setTextColor(30, 41, 59);
-        doc.text(`Total Sales: Rs. ${displayMetrics.totalRevenue.toLocaleString()}`, 14, 55);
-        doc.text(`Total Expenses: Rs. ${displayMetrics.totalExpenses.toLocaleString()}`, 14, 65);
-        doc.text(`Net Profit: Rs. ${displayMetrics.netProfit.toLocaleString()}`, 14, 75);
-
-        const sunilShare = displayMetrics.netProfit * 0.5;
-        const sunilWithdrawn = filteredFounderWithdrawals.filter(w => w.founderName === 'Sunil').reduce((s, w) => s + w.amount, 0);
-        doc.text(`Sunil Share (50%): Rs. ${sunilShare.toLocaleString()}`, 14, 90);
-        doc.text(`  - Withdrawn: Rs. ${sunilWithdrawn.toLocaleString()}`, 14, 98);
-        doc.text(`  - Remaining: Rs. ${(sunilShare - sunilWithdrawn).toLocaleString()}`, 14, 106);
-
-        const aryanShare = displayMetrics.netProfit * 0.5;
-        const aryanWithdrawn = filteredFounderWithdrawals.filter(w => w.founderName === 'Aryan').reduce((s, w) => s + w.amount, 0);
-        doc.text(`Aryan Share (50%): Rs. ${aryanShare.toLocaleString()}`, 105, 90);
-        doc.text(`  - Withdrawn: Rs. ${aryanWithdrawn.toLocaleString()}`, 105, 98);
-        doc.text(`  - Remaining: Rs. ${(aryanShare - aryanWithdrawn).toLocaleString()}`, 105, 106);
-
-        // Sales Table
-        const salesRows = filteredProcessedPayments.map(p => [
-            p.paymentDate ? new Date(p.paymentDate).toLocaleDateString() : '—',
-            p.client?.name || '—',
-            p.totalAmount?.toLocaleString() || '0',
-            p.paidAmount?.toLocaleString() || '0',
-            p.paymentMode || '—'
-        ]);
-        doc.autoTable({
-            startY: 120,
-            head: [['Date', 'Client', 'Total Amount', 'Paid Amount', 'Mode']],
-            body: salesRows,
-            headStyles: { fillColor: [16, 185, 129] },
-            margin: { left: 14, right: 14 }
-        });
-
-        // Expenses Table
-        const expRows = filteredExpenses.map(e => [
-            e.date ? new Date(e.date).toLocaleDateString() : '—',
-            e.title || '—',
-            e.category || '—',
-            e.amount?.toLocaleString() || '0'
-        ]);
-        doc.autoTable({
-            startY: doc.lastAutoTable.finalY + 15,
-            head: [['Date', 'Title', 'Category', 'Amount']],
-            body: expRows,
-            headStyles: { fillColor: [239, 68, 68] },
-            margin: { left: 14, right: 14 }
-        });
-
-        doc.save(`Financial_Report_${selectedMonth.replace('-', '_')}.pdf`);
-        toast.success("Monthly Report Downloaded");
-    };
 
     const statusBadge = (s) => {
         const map = {
@@ -384,9 +327,7 @@ const Payments = () => {
                                 ))}
                             </select>
                         </div>
-                        <button onClick={downloadMonthlyReport} className="flex flex-col sm:flex-row items-center justify-center gap-1.5 px-3 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border border-indigo-200 text-[12px] font-bold rounded-xl transition-all" title="Download Monthly Report">
-                            <DownloadCloud className="w-4 h-4" /> <span className="hidden sm:inline">Export</span>
-                        </button>
+
                         <button onClick={openPayAdd} className="flex items-center gap-1.5 px-4 py-2.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 text-[12px] font-bold rounded-xl border border-emerald-200 transition-all">
                             <Plus className="w-3.5 h-3.5" /> Log Payment
                         </button>
@@ -397,23 +338,27 @@ const Payments = () => {
                 </div>
             </div>
 
-            {/* ─── 5 FINANCE KPI CARDS ─── */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            {/* ─── FINANCE KPI CARDS ─── */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 <FinanceCard label="Total Revenue" value={fmt(displayMetrics.totalRevenue)} icon={Wallet} color="emerald" trend={selectedMonth === 'all' ? displayMetrics.revenueGrowth : null} />
                 <FinanceCard label="Expenses" value={fmt(displayMetrics.totalExpenses)} icon={ArrowDownCircle} color="red" />
                 <FinanceCard label="Net Profit" value={fmt(displayMetrics.netProfit)} icon={TrendingUp} color={displayMetrics.netProfit >= 0 ? 'emerald' : 'rose'} sub={`${displayMetrics.profitMargin}% margin`} />
+                <FinanceCard label="Founder Withdrawals" value={fmt(displayMetrics.cashInHand)} icon={DollarSign} color="fuchsia" sub="Cash in Hand" />
+                <FinanceCard label="Bank Balance" value={fmt(displayMetrics.bankBalance)} icon={Zap} color="sky" sub="Current Funds" />
                 <FinanceCard label="Pending" value={fmt(displayMetrics.pendingPayments)} icon={Clock} color="amber" sub={displayMetrics.overduePayments > 0 ? `₹${displayMetrics.overduePayments.toLocaleString()} overdue` : 'Overall Pending'} />
                 <FinanceCard label="This Month" value={fmt(metrics.thisMonthRevenue)} icon={DollarSign} color="indigo" />
             </div>
 
             {/* ─── TAB NAVIGATION ─── */}
-            <div className="flex items-center gap-1.5 p-1.5 bg-slate-50 rounded-2xl border border-slate-100 w-fit">
-                {tabs.map(t => (
-                    <button key={t.id} onClick={() => setTab(t.id)} className={`flex items-center gap-1.5 px-5 py-2.5 text-[13px] font-bold rounded-xl transition-all duration-200 ${tab === t.id ? 'bg-white text-slate-800 shadow-sm border border-slate-200/60' : 'text-slate-400 hover:text-slate-600'}`}>
-                        <t.icon className="w-4 h-4" />
-                        {t.label}
-                    </button>
-                ))}
+            <div className="max-w-full overflow-x-auto pb-2 -mb-2 custom-scrollbar">
+                <div className="inline-flex items-center gap-1.5 p-1.5 bg-slate-50 rounded-2xl border border-slate-100 w-max">
+                    {tabs.map(t => (
+                        <button key={t.id} onClick={() => setTab(t.id)} className={`flex items-center gap-1.5 px-5 py-2.5 text-[13px] font-bold rounded-xl transition-all duration-200 whitespace-nowrap shrink-0 ${tab === t.id ? 'bg-white text-slate-800 shadow-sm border border-slate-200/60' : 'text-slate-400 hover:text-slate-600'}`}>
+                            <t.icon className="w-4 h-4" />
+                            {t.label}
+                        </button>
+                    ))}
+                </div>
             </div>
 
             {/* ═══ OVERVIEW TAB ═══ */}
