@@ -14,6 +14,7 @@ import Analytics from './pages/Analytics';
 import Tasks from './pages/Tasks';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
+import Salary from './pages/Salary';
 
 const ProtectedRoute = ({ children }) => {
     const { user, loading } = useAuth();
@@ -54,6 +55,7 @@ function App() {
 
                 {/* Restricted Routes */}
                 <Route path="/payments" element={<RoleRoute restrictedRoles={['sales']}><Payments /></RoleRoute>} />
+                <Route path="/salary" element={<RoleRoute restrictedRoles={['sales']}><Salary /></RoleRoute>} />
                 <Route path="/analytics" element={<RoleRoute restrictedRoles={['sales']}><Analytics /></RoleRoute>} />
                 <Route path="/reports" element={<RoleRoute restrictedRoles={['sales']}><Reports /></RoleRoute>} />
 

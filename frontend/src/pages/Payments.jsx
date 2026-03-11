@@ -27,7 +27,7 @@ const tooltipStyle = {
 };
 
 const emptyExpense = { title: '', amount: 0, category: 'Other', description: '', date: '', recurring: false, recurringInterval: 'None', vendor: '', paidBy: '' };
-const CATEGORIES = ['Developer Payout', 'Hosting', 'Marketing', 'Software', 'Office', 'Travel', 'Other'];
+const CATEGORIES = ['Developer Payout', 'Hosting', 'Marketing', 'Software', 'Office', 'Travel', 'Other', 'Salary'];
 
 const fmt = (val) => {
     if (!val || val === 0) return '₹0';

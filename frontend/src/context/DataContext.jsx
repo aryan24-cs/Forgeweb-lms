@@ -17,6 +17,8 @@ export const DataProvider = ({ children }) => {
     const [tasks, setTasks] = useState([]);
     const [recentActivities, setRecentActivities] = useState([]);
     const [founderWithdrawals, setFounderWithdrawals] = useState([]);
+    const [salaryConfig, setSalaryConfig] = useState([]);
+    const [salaryPayments, setSalaryPayments] = useState([]);
 
     const [loading, setLoading] = useState(true);
 
@@ -24,7 +26,7 @@ export const DataProvider = ({ children }) => {
         if (!user) return;
         try {
             // Fetch all core entities + the stats route just for recent Activities if there's no dedicated route
-            const [leadsRes, clientsRes, projectsRes, paymentsRes, expensesRes, tasksRes, founderWithdrawalsRes, statsRes] = await Promise.all([
+            const [leadsRes, clientsRes, projectsRes, paymentsRes, expensesRes, tasksRes, founderWithdrawalsRes, salaryConfigRes, salaryPaymentsRes, statsRes] = await Promise.all([
                 api.get('/leads').catch(() => ({ data: [] })),
                 api.get('/clients').catch(() => ({ data: [] })),
                 api.get('/projects').catch(() => ({ data: [] })),
@@ -32,6 +34,8 @@ export const DataProvider = ({ children }) => {
                 api.get('/expenses').catch(() => ({ data: [] })),
                 api.get('/tasks').catch(() => ({ data: [] })),
                 api.get('/founder-withdrawals').catch(() => ({ data: [] })),
+                api.get('/salaries/config').catch(() => ({ data: [] })),
+                api.get('/salaries/payments').catch(() => ({ data: [] })),
                 api.get('/dashboard/stats').catch(() => ({ data: { recentActivities: [] } }))
             ]);
 
@@ -42,6 +46,8 @@ export const DataProvider = ({ children }) => {
             setExpenses(expensesRes.data || []);
             setTasks(tasksRes.data || []);
             setFounderWithdrawals(founderWithdrawalsRes.data || []);
+            setSalaryConfig(salaryConfigRes.data || []);
+            setSalaryPayments(salaryPaymentsRes.data || []);
 
             if (statsRes.data?.recentActivities) {
                 setRecentActivities(statsRes.data.recentActivities);
@@ -135,7 +141,7 @@ export const DataProvider = ({ children }) => {
             .slice(0, 5);
 
         return {
-            raw: { leads, clients, projects, payments, expenses, tasks, recentActivities, founderWithdrawals },
+            raw: { leads, clients, projects, payments, expenses, tasks, recentActivities, founderWithdrawals, salaryConfig, salaryPayments },
             metrics,
             graphs: {
                 monthlyData,
@@ -152,7 +158,7 @@ export const DataProvider = ({ children }) => {
             loading,
             refreshData
         };
-    }, [leads, clients, projects, payments, expenses, tasks, recentActivities, founderWithdrawals, loading, refreshData]);
+    }, [leads, clients, projects, payments, expenses, tasks, recentActivities, founderWithdrawals, salaryConfig, salaryPayments, loading, refreshData]);
 
     return (
         <DataContext.Provider value={store}>

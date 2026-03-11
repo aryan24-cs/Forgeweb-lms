@@ -5,7 +5,7 @@ const expenseSchema = new mongoose.Schema({
     amount: { type: Number, required: true },
     category: {
         type: String,
-        enum: ['Developer Payout', 'Hosting', 'Marketing', 'Software', 'Office', 'Travel', 'Other'],
+        enum: ['Developer Payout', 'Hosting', 'Marketing', 'Software', 'Office', 'Travel', 'Other', 'Salary'],
         default: 'Other'
     },
     description: { type: String, default: '' },
