@@ -91,9 +91,9 @@ const Topbar = () => {
                                             <div className="px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-slate-400">Leads</div>
                                             {results.leads.map(l => (
                                                 <div key={l._id} onClick={() => handleNavigate('/leads')} className="flex items-center gap-3 px-3 py-2.5 hover:bg-slate-50 rounded-xl cursor-pointer group transition-colors">
-                                                    <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs">{l.name?.charAt(0)}</div>
+                                                    <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold text-xs">{l.name?.charAt(0)}</div>
                                                     <div>
-                                                        <p className="text-[13px] font-bold text-slate-800 leading-tight group-hover:text-indigo-600 transition-colors">{l.name}</p>
+                                                        <p className="text-[13px] font-bold text-[#111111] leading-tight group-hover:text-primary transition-colors">{l.name}</p>
                                                         <p className="text-[11px] font-semibold text-slate-400">{l.company || 'Opportunity'}</p>
                                                     </div>
                                                 </div>
@@ -111,7 +111,7 @@ const Topbar = () => {
                                                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg>
                                                     </div>
                                                     <div>
-                                                        <p className="text-[13px] font-bold text-slate-800 leading-tight group-hover:text-sky-600 transition-colors">{p.name}</p>
+                                                        <p className="text-[13px] font-bold text-[#111111] leading-tight group-hover:text-sky-600 transition-colors">{p.name}</p>
                                                         <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">{p.status}</p>
                                                     </div>
                                                 </div>
@@ -125,11 +125,11 @@ const Topbar = () => {
                                             <div className="px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-slate-400">Tasks</div>
                                             {results.tasks.map(t => (
                                                 <div key={t._id} onClick={() => handleNavigate('/tasks')} className="flex items-center gap-3 px-3 py-2.5 hover:bg-slate-50 rounded-xl cursor-pointer group transition-colors">
-                                                    <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+                                                    <div className="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center">
                                                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
                                                     </div>
                                                     <div>
-                                                        <p className="text-[13px] font-bold text-slate-800 leading-tight group-hover:text-amber-600 transition-colors">{t.title}</p>
+                                                        <p className="text-[13px] font-bold text-[#111111] leading-tight group-hover:text-purple-600 transition-colors">{t.title}</p>
                                                         <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">{t.status}</p>
                                                     </div>
                                                 </div>
@@ -140,7 +140,7 @@ const Topbar = () => {
                             ) : (
                                 <div className="p-8 text-center flex flex-col items-center">
                                     <svg className="w-10 h-10 text-slate-200 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                                    <p className="text-[13px] font-bold text-slate-600">No signals intercepted.</p>
+                                    <p className="text-[13px] font-bold text-[#111111]">No signals intercepted.</p>
                                     <p className="text-[11px] font-semibold text-slate-400 mt-1">Try expanding your search parameters.</p>
                                 </div>
                             )}
@@ -162,11 +162,11 @@ const Topbar = () => {
 
                 {/* Profile */}
                 <div className="flex items-center gap-3 p-1.5 pr-2 rounded-2xl">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-sky-400 flex items-center justify-center text-white text-sm font-bold shadow-md shadow-indigo-500/20">
+                    <div className="w-10 h-10 rounded-[14px] bg-[#111111] flex items-center justify-center text-white text-sm font-bold shadow-md shadow-black/20">
                         {user?.name?.[0] || 'A'}
                     </div>
                     <div className="hidden lg:block text-left">
-                        <p className="text-sm font-bold text-slate-800 leading-none mb-1">{user?.name || 'Admin'}</p>
+                        <p className="text-sm font-bold text-[#111111] leading-none mb-1">{user?.name || 'Admin'}</p>
                         <p className="text-[11px] font-semibold text-slate-500 capitalize tracking-wide">{user?.role || 'admin'}</p>
                     </div>
                 </div>

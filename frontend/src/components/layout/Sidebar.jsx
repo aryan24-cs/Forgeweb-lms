@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import logoImg from '../../assets/logo.png';
 
 const icons = {
     dashboard: <svg className="w-[22px] h-[22px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1" /></svg>,
@@ -59,9 +60,14 @@ const Sidebar = () => {
             {/* Desktop Sidebar (hidden on mobile) */}
             <aside className={`max-md:hidden ${collapsed ? 'w-[88px]' : 'w-[280px]'} h-screen bg-white border-r border-slate-200/60 flex flex-col transition-all duration-300 shrink-0 z-40 relative shadow-[4px_0_24px_rgba(0,0,0,0.02)]`}>
                 {/* Logo */}
-                <div className={`h-[72px] flex items-center border-b border-slate-200/50 shrink-0 transition-all duration-300 ${collapsed ? 'justify-center px-4' : 'px-8'}`}>
-                    <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-black text-sm shrink-0 shadow-lg shadow-indigo-600/20">FW</div>
-                    {!collapsed && <span className="ml-4 font-black text-xl tracking-tight text-slate-800">ForgeWeb</span>}
+                <div className={`h-[80px] flex items-center border-b border-slate-200/50 shrink-0 transition-all duration-300 ${collapsed ? 'justify-center px-4' : 'px-6 overflow-hidden'}`}>
+                    {collapsed ? (
+                        <div className="w-10 h-10 rounded-[14px] bg-[#111111] flex items-center justify-center text-white font-black text-lg shrink-0 shadow-lg shadow-black/20">F</div>
+                    ) : (
+                        <div className="flex items-center w-[200px] -ml-2">
+                            <img src={logoImg} alt="ForgeWeb Logo" className="h-[120px] w-auto object-contain mix-blend-multiply origin-left scale-[1.2] pointer-events-none" />
+                        </div>
+                    )}
                 </div>
 
                 {/* Navigation */}
@@ -76,8 +82,8 @@ const Sidebar = () => {
                                 className={({ isActive }) =>
                                     `flex items-center gap-3.5 px-4 py-3.5 rounded-xl text-[14px] font-semibold transition-all duration-200
                                     ${isActive
-                                        ? 'bg-indigo-50 text-indigo-700 shadow-[inset_4px_0_0_0_rgba(79,70,229,1)]'
-                                        : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700 group'
+                                        ? 'bg-primary/10 text-primary shadow-[inset_4px_0_0_0_rgba(0,71,255,1)]'
+                                        : 'text-slate-500 hover:bg-slate-50 hover:text-[#111111] group'
                                     }
                                     ${collapsed ? 'justify-center !px-0 shadow-none' : ''}`
                                 }
@@ -107,7 +113,7 @@ const Sidebar = () => {
                     </button>
                     <button
                         onClick={() => setCollapsed(!collapsed)}
-                        className={`flex items-center gap-3.5 px-4 py-3 rounded-xl text-[14px] font-semibold w-full text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-all duration-200 group ${collapsed ? 'justify-center !px-2' : ''}`}
+                        className={`flex items-center gap-3.5 px-4 py-3 rounded-xl text-[14px] font-semibold w-full text-slate-400 hover:bg-slate-100 hover:text-[#111111] transition-all duration-200 group ${collapsed ? 'justify-center !px-2' : ''}`}
                     >
                         <svg className="w-[22px] h-[22px] transition-transform duration-200 group-hover:scale-110" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                             {collapsed
@@ -131,8 +137,8 @@ const Sidebar = () => {
                         className={({ isActive }) =>
                             `flex flex-col items-center justify-center gap-1 p-2 rounded-xl flex-1 max-w-[72px] transition-all duration-200
                             ${isActive
-                                ? 'text-indigo-600'
-                                : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
+                                ? 'text-primary'
+                                : 'text-slate-400 hover:text-[#111111] hover:bg-slate-50'
                             }`
                         }
                     >
@@ -141,7 +147,7 @@ const Sidebar = () => {
                                 <div className={`transition-transform duration-200 ${isActive ? 'scale-110' : ''}`}>
                                     {icons[item.icon]}
                                 </div>
-                                <span className={`text-[10px] font-bold leading-none ${isActive ? 'text-indigo-600' : 'text-slate-500'}`}>{item.label}</span>
+                                <span className={`text-[10px] font-bold leading-none ${isActive ? 'text-primary' : 'text-slate-500'}`}>{item.label}</span>
                             </>
                         )}
                     </NavLink>
@@ -153,12 +159,12 @@ const Sidebar = () => {
                         <button
                             onClick={() => setMobileMore(!mobileMore)}
                             className={`flex flex-col items-center justify-center gap-1 p-2 rounded-xl w-full transition-all duration-200
-                            ${mobileMore ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'}`}
+                            ${mobileMore ? 'text-primary' : 'text-slate-400 hover:text-[#111111] hover:bg-slate-50'}`}
                         >
                             <svg className={`w-[22px] h-[22px] transition-transform duration-200 ${mobileMore ? 'scale-110' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
                             </svg>
-                            <span className={`text-[10px] font-bold leading-none ${mobileMore ? 'text-indigo-600' : 'text-slate-500'}`}>More</span>
+                            <span className={`text-[10px] font-bold leading-none ${mobileMore ? 'text-primary' : 'text-slate-500'}`}>More</span>
                         </button>
 
                         {/* Floating More Menu */}
@@ -172,11 +178,11 @@ const Sidebar = () => {
                                             to={item.to}
                                             end={item.to === '/'}
                                             onClick={() => setMobileMore(false)}
-                                            className={({ isActive }) => `flex items-center gap-3 px-4 py-3.5 text-[14px] font-semibold transition-all ${isActive ? 'bg-indigo-50 text-indigo-700 shadow-[inset_4px_0_0_0_rgba(79,70,229,1)]' : 'text-slate-600 hover:bg-slate-50 hover:text-indigo-600'}`}
+                                            className={({ isActive }) => `flex items-center gap-3 px-4 py-3.5 text-[14px] font-semibold transition-all ${isActive ? 'bg-primary/10 text-primary shadow-[inset_4px_0_0_0_rgba(0,71,255,1)]' : 'text-slate-600 hover:bg-slate-50 hover:text-primary'}`}
                                         >
                                             {({ isActive }) => (
                                                 <>
-                                                    <div className={isActive ? 'text-indigo-600' : 'text-slate-400'}>{icons[item.icon]}</div>
+                                                    <div className={isActive ? 'text-primary' : 'text-slate-400'}>{icons[item.icon]}</div>
                                                     {item.label}
                                                 </>
                                             )}

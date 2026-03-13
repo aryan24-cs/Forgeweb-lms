@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import logoImg from '../assets/logo.png';
 
 const Login = () => {
     const [email, setEmail] = useState('');
@@ -25,17 +26,17 @@ const Login = () => {
     };
 
     return (
-        <div className="min-h-screen flex bg-white text-slate-900">
+        <div className="min-h-screen flex bg-[#FAFAFA] text-slate-900">
             {/* Left side - Login Form */}
-            <div className="w-full lg:w-1/2 flex items-center justify-center p-8 relative z-10">
+            <div className="w-full lg:w-1/2 flex items-center justify-center p-8 relative z-10 bg-white shadow-[20px_0_60px_-15px_rgba(0,0,0,0.05)]">
                 <div className="w-full max-w-[420px] animate-slideIn">
                     {/* Logo Section */}
-                    <div className="mb-10 lg:mb-12">
-                        <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-indigo-600 text-white text-xl font-black mb-6 shadow-xl shadow-indigo-600/20">
-                            FW
+                    <div className="mb-6 lg:mb-8">
+                        <div className="-ml-6 -mt-8 mb-1">
+                            <img src={logoImg} alt="ForgeWeb Logo" className="h-[130px] w-auto object-contain mix-blend-multiply pointer-events-none origin-left scale-[1.2]" />
                         </div>
-                        <h1 className="text-3xl sm:text-4xl font-black tracking-tight mb-2 text-slate-800">Welcome Back</h1>
-                        <p className="text-slate-500 font-medium">Please enter your details to sign in.</p>
+                        <h1 className="text-4xl sm:text-5xl font-black tracking-tight mb-2 text-[#111111]">Welcome <span className="font-serif italic text-primary font-normal">Back</span></h1>
+                        <p className="text-slate-500 font-medium text-lg mt-3">Please enter your details to sign in.</p>
                     </div>
 
                     {error && (
@@ -49,26 +50,26 @@ const Login = () => {
 
                     <form onSubmit={handleSubmit} className="space-y-6">
                         <div>
-                            <label className="block text-sm font-bold text-slate-700 mb-2">Email Address</label>
+                            <label className="block text-sm font-bold text-[#111111] mb-2 uppercase tracking-wide">Email Address</label>
                             <input
                                 type="email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                className="fw-input py-3 text-base"
+                                className="fw-input py-3.5 text-base"
                                 placeholder="name@forgeweb.in"
                                 required
                             />
                         </div>
                         <div>
                             <div className="flex items-center justify-between mb-2">
-                                <label className="block text-sm font-bold text-slate-700">Password</label>
-                                <a href="#" className="text-sm font-semibold text-indigo-600 hover:text-indigo-700 transition-colors">Forgot password?</a>
+                                <label className="block text-sm font-bold text-[#111111] uppercase tracking-wide">Password</label>
+                                <a href="#" className="text-sm font-bold text-primary hover:text-primary-hover transition-colors">Forgot password?</a>
                             </div>
                             <input
                                 type="password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="fw-input py-3 text-base"
+                                className="fw-input py-3.5 text-base"
                                 placeholder="••••••••"
                                 required
                             />
@@ -77,7 +78,7 @@ const Login = () => {
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-all duration-300 shadow-[0_8px_20px_-4px_rgba(79,70,229,0.3)] hover:shadow-[0_12px_24px_-6px_rgba(79,70,229,0.4)] hover:-translate-y-0.5 disabled:opacity-75 disabled:cursor-not-allowed text-base flex items-center justify-center gap-2"
+                            className="w-full fw-btn-primary text-lg mt-4 flex items-center justify-center gap-2"
                         >
                             {loading ? (
                                 <>
@@ -90,41 +91,40 @@ const Login = () => {
                         </button>
                     </form>
 
-                    <div className="mt-10 pt-6 border-t border-slate-100 text-center">
-                        <p className="text-sm text-slate-400 font-medium">
-                            Secure Access • ForgeWeb LMS
+                    <div className="mt-12 pt-6 text-center">
+                        <p className="text-sm text-slate-400 font-bold uppercase tracking-widest">
+                            ForgeWeb LMS
                         </p>
                     </div>
                 </div>
             </div>
 
             {/* Right side - Decoration */}
-            <div className="hidden lg:flex w-1/2 bg-slate-50/50 border-l border-slate-200/50 items-center justify-center relative overflow-hidden">
+            <div className="hidden lg:flex w-1/2 bg-[#FAFAFA] items-center justify-center relative overflow-hidden" 
+                 style={{ 
+                    backgroundImage: 'linear-gradient(to right, rgba(0,0,0,0.02) 1px, transparent 1px), linear-gradient(to bottom, rgba(0,0,0,0.02) 1px, transparent 1px)',
+                    backgroundSize: '40px 40px'
+                 }}>
                 {/* Visual Interest Backgrounds */}
-                <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-indigo-200/40 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/3"></div>
-                <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-sky-200/40 rounded-full blur-[100px] translate-y-1/3 -translate-x-1/3"></div>
+                <div className="absolute top-1/4 right-1/4 w-[600px] h-[600px] bg-primary/20 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/3 mix-blend-multiply"></div>
+                <div className="absolute bottom-1/4 left-1/4 w-[500px] h-[500px] bg-sky-300/20 rounded-full blur-[100px] translate-y-1/3 -translate-x-1/3 mix-blend-multiply"></div>
 
                 <div className="relative z-10 max-w-lg text-center px-12 animate-fadeIn" style={{ animationDelay: '0.2s' }}>
-                    <div className="w-24 h-24 mx-auto bg-white/80 rounded-2xl shadow-xl shadow-slate-200/50 backdrop-blur-sm flex items-center justify-center mb-10 border border-slate-200/50">
-                        <svg className="w-12 h-12 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118.75 16.5h-2.25m-7.5 0h7.5m-7.5 0l-1 3m8.5-3l1 3m0 0l.5 1.5m-.5-1.5h-9.5m0 0l-.5 1.5M9 11.25v1.5M12 9v3.75m3-6v6" />
-                        </svg>
-                    </div>
-                    <h2 className="text-4xl font-black mb-5 tracking-tight text-slate-800">Accelerate your workflow.</h2>
+                    <h2 className="text-5xl font-black mb-6 tracking-tight text-[#111111]">Accelerate your <span className="font-serif italic text-primary font-normal">workflow</span>.</h2>
                     <p className="text-lg text-slate-500 leading-relaxed font-medium max-w-md mx-auto">
                         Manage leads, track revenue, and centralize your agency operations with a remarkably beautiful platform.
                     </p>
 
                     {/* User avatars cluster */}
-                    <div className="flex items-center justify-center gap-4 mt-12 bg-white/60 p-4 rounded-2xl backdrop-blur-md border border-white shadow-[0_8px_30px_rgba(0,0,0,0.04)] inline-flex">
+                    <div className="flex items-center justify-center gap-4 mt-16 bg-white/80 p-5 rounded-full backdrop-blur-xl border border-white shadow-[0_20px_40px_rgba(0,0,0,0.04)] inline-flex">
                         <div className="flex -space-x-4">
-                            <div className="w-12 h-12 rounded-full border-[3px] border-white bg-emerald-500 shadow-md flex items-center justify-center text-white text-sm font-bold">A</div>
-                            <div className="w-12 h-12 rounded-full border-[3px] border-white bg-blue-500 shadow-md flex items-center justify-center text-white text-sm font-bold">V</div>
-                            <div className="w-12 h-12 rounded-full border-[3px] border-white bg-amber-500 shadow-md flex items-center justify-center text-white text-sm font-bold">S</div>
+                            <div className="w-12 h-12 rounded-full border-[3px] border-white bg-[#111111] shadow-md flex items-center justify-center text-white text-sm font-bold">A</div>
+                            <div className="w-12 h-12 rounded-full border-[3px] border-white bg-primary shadow-md flex items-center justify-center text-white text-sm font-bold">V</div>
+                            <div className="w-12 h-12 rounded-full border-[3px] border-white bg-sky-500 shadow-md flex items-center justify-center text-white text-sm font-bold">S</div>
                         </div>
-                        <div className="text-left pl-2">
-                            <p className="text-sm font-bold text-slate-800">Your entire team is here</p>
-                            <p className="text-[13px] text-slate-500 font-medium">Join 3+ active members</p>
+                        <div className="text-left pl-2 pr-4">
+                            <p className="text-sm font-bold text-[#111111]">Your entire team is here</p>
+                            <p className="text-[13px] text-slate-500 font-medium tracking-wide">Join 3+ active members</p>
                         </div>
                     </div>
                 </div>

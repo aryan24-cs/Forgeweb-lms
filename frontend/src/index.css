@@ -15,12 +15,13 @@
         font-family: 'Inter', system-ui, -apple-system, sans-serif;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
-        background-color: #f8f9fb;
-        color: #0f172a;
-        background-image:
-            radial-gradient(at 40% 20%, hsla(228, 100%, 74%, 0.05) 0px, transparent 50%),
-            radial-gradient(at 80% 0%, hsla(189, 100%, 56%, 0.05) 0px, transparent 50%),
-            radial-gradient(at 0% 50%, hsla(355, 100%, 93%, 0.04) 0px, transparent 50%);
+        background-color: #FAFAFA; /* Cleaner white/light-gray bg similar to forgeweb.in */
+        color: #111111; /* Deeper black for strong contrast */
+        /* Subtle techy grid background found in ForgeWeb hero section */
+        background-image: 
+            linear-gradient(to right, rgba(0,0,0,0.02) 1px, transparent 1px),
+            linear-gradient(to bottom, rgba(0,0,0,0.02) 1px, transparent 1px);
+        background-size: 40px 40px;
         background-attachment: fixed;
     }
 
@@ -48,8 +49,8 @@
     }
 
     ::selection {
-        background: rgba(99, 102, 241, 0.15);
-        color: #312e81;
+        background: rgba(0, 71, 255, 0.15); /* Primary blue */
+        color: #0038CC;
     }
 }
 
@@ -125,25 +126,38 @@
 
     /* ── Card ── */
     .fw-card {
-        @apply bg-white border border-slate-100/80 rounded-[22px] transition-all duration-300;
-        box-shadow: 0 2px 12px -2px rgba(0, 0, 0, 0.02);
+        @apply bg-white border border-slate-200/60 rounded-[16px] transition-all duration-300;
+        box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.03);
     }
 
     .fw-card:hover {
-        @apply border-slate-200;
-        box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.06);
-        transform: translateY(-1px);
+        @apply border-primary/20;
+        box-shadow: 0 12px 32px -8px rgba(0, 71, 255, 0.08);
+        transform: translateY(-2px);
+    }
+
+    /* ── Buttons ── */
+    .fw-btn-primary {
+        @apply bg-primary hover:bg-primary-hover text-white font-bold rounded-full px-6 py-3 transition-all duration-300 shadow-[0_4px_14px_0_rgba(0,71,255,0.39)] hover:shadow-[0_6px_20px_rgba(0,71,255,0.23)] hover:-translate-y-0.5 whitespace-nowrap;
+    }
+
+    .fw-btn-secondary {
+        @apply bg-[#111111] hover:bg-black text-white font-bold rounded-full px-6 py-3 transition-all duration-300 shadow-[0_4px_14px_0_rgba(0,0,0,0.2)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.15)] hover:-translate-y-0.5 whitespace-nowrap;
+    }
+    
+    .fw-btn-outline {
+        @apply border-2 border-[#111111] text-[#111111] hover:bg-[#111111] hover:text-white font-bold rounded-full px-6 py-2.5 transition-all duration-300 whitespace-nowrap;
     }
 
     /* ── Input ── */
     .fw-input {
-        @apply w-full max-w-full px-4 py-2.5 rounded-xl border border-slate-200/80 bg-white text-sm text-slate-800 transition-all duration-200 outline-none;
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+        @apply w-full max-w-full px-4 py-3 rounded-full border border-slate-200/80 bg-white text-sm text-slate-800 transition-all duration-200 outline-none;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
     }
 
     .fw-input:focus {
-        @apply border-indigo-400 ring-[3px] ring-indigo-500/10;
-        box-shadow: 0 2px 8px rgba(99, 102, 241, 0.06);
+        @apply border-primary ring-[3px] ring-primary/10;
+        box-shadow: 0 4px 12px rgba(0, 71, 255, 0.08);
     }
 
     .fw-input::placeholder {

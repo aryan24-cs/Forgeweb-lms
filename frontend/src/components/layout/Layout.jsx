@@ -4,7 +4,7 @@ import Topbar from './Topbar';
 
 const Layout = ({ children }) => {
     return (
-        <div className="flex flex-col md:flex-row h-screen bg-transparent overflow-hidden selection:bg-indigo-100 selection:text-indigo-900">
+        <div className="flex flex-col md:flex-row h-screen bg-transparent overflow-hidden">
             {/* Nav container acting as bottom bar on mobile and sidebar on desktop */}
             <div className="order-2 md:order-1 z-40 bg-white md:bg-transparent shrink-0">
                 <Sidebar />

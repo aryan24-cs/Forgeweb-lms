@@ -1,4 +1,8 @@
 import mongoose from 'mongoose';
+import dns from 'dns';
+
+// Fix for Node.js DNS SRV EREFUSED errors on Windows / certain ISPs
+dns.setServers(['8.8.8.8', '1.1.1.1']);
 
 let cached = global.mongoose;
 
