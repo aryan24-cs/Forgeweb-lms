@@ -3,6 +3,7 @@ import api from '../api';
 import toast from 'react-hot-toast';
 import Modal from '../components/ui/Modal';
 import { useData } from '../context/DataContext';
+import { useAuth } from '../context/AuthContext';
 import { Target, CheckCircle2, Clock } from 'lucide-react';
 
 const COLUMNS = ['To Do', 'In Progress', 'Testing', 'Client Review', 'Completed'];
@@ -18,6 +19,7 @@ const PRIORITY_COLORS = { Low: 'text-slate-400', Medium: 'text-indigo-500', High
 const emptyForm = { title: '', description: '', assignedTo: '', status: 'To Do', priority: 'Medium', dueDate: '', estimatedHours: 0, relatedProject: '', relatedClient: '' };
 
 const Tasks = () => {
+    const { user: currentUser } = useAuth();
     const { raw, refreshData } = useData();
     const tasks = raw?.tasks || [];
     const projects = raw?.projects || [];
@@ -30,12 +32,15 @@ const Tasks = () => {
     const [view, setView] = useState('kanban');
     const [filterProject, setFilterProject] = useState('');
     const [filterUser, setFilterUser] = useState('');
+    const [viewModal, setViewModal] = useState(false);
+    const [activeTask, setActiveTask] = useState(null);
 
     useEffect(() => {
         api.get('/auth/users').then(r => setUsers(r.data)).catch(() => { });
     }, []);
 
     const openAdd = () => { setForm(emptyForm); setEditId(null); setModal(true); };
+    const openTaskView = (t) => { setActiveTask(t); setViewModal(true); };
     const openEdit = (t) => {
         setForm({
             ...t,
@@ -169,7 +174,7 @@ const Tasks = () => {
                                 {filtered.filter(t => t.status === col).map(t => (
                                     <div key={t._id} draggable onDragStart={e => e.dataTransfer.setData('taskId', t._id)}
                                         className="bg-white rounded-2xl border border-slate-200/80 p-5 cursor-grab active:cursor-grabbing hover:-translate-y-1 hover:border-indigo-200 hover:shadow-[0_12px_24px_-8px_rgba(79,70,229,0.15)] transition-all duration-300"
-                                        onClick={() => openEdit(t)}
+                                        onClick={() => openTaskView(t)}
                                     >
                                         <div className="flex items-start justify-between gap-3 mb-2">
                                             <h4 className="font-bold text-[15px] leading-snug text-slate-800">{t.title}</h4>
@@ -215,7 +220,7 @@ const Tasks = () => {
                                 {['Target / Directive', 'Assigned Operative', 'Project Stream', 'Risk Priority', 'Deadline', 'Status', ''].map(h => <th key={h} className="text-left px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">{h}</th>)}
                             </tr></thead>
                             <tbody>{filtered.map(t => (
-                                <tr key={t._id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors group cursor-pointer" onClick={() => openEdit(t)}>
+                                <tr key={t._id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors group cursor-pointer" onClick={() => openTaskView(t)}>
                                     <td className="px-6 py-4"><span className="font-bold text-[14px] text-slate-800">{t.title}</span></td>
                                     <td className="px-6 py-4">
                                         {t.assignedTo ? (
@@ -268,6 +273,80 @@ const Tasks = () => {
                         <div><label className={label}>Client Nexus</label><select value={form.relatedClient} onChange={e => setForm({ ...form, relatedClient: e.target.value })} className="fw-input cursor-pointer appearance-none select-wrapper"><option value="">Internal Operation</option>{clients.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}</select></div>
                     </div>
                 </form>
+            </Modal>
+
+            {/* View Modal */}
+            <Modal isOpen={viewModal} onClose={() => setViewModal(false)} title="Intelligence Briefing" maxWidth="max-w-3xl"
+                footer={<>
+                    <button type="button" onClick={() => setViewModal(false)} className="px-6 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-sm font-bold text-slate-600 transition">Close Intel</button>
+                    {activeTask && currentUser?._id === (activeTask.assignedTo?._id || activeTask.assignedTo) && activeTask.status === 'To Do' && (
+                        <button type="button" onClick={async () => { await updateStatus(activeTask._id, 'In Progress'); setActiveTask(null); setViewModal(false); }} className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl shadow-[0_8px_20px_-4px_rgba(37,99,235,0.3)] transition ml-2">Accept Task</button>
+                    )}
+                    {activeTask && currentUser?._id === (activeTask.assignedTo?._id || activeTask.assignedTo) && ['In Progress', 'Testing', 'Client Review'].includes(activeTask.status) && (
+                        <button type="button" onClick={async () => { await updateStatus(activeTask._id, 'Completed'); setActiveTask(null); setViewModal(false); }} className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-xl shadow-[0_8px_20px_-4px_rgba(16,185,129,0.3)] transition ml-2">Mark Completed</button>
+                    )}
+                    {(currentUser?.role === 'admin' || currentUser?.role === 'manager') && activeTask && (
+                        <button type="button" onClick={() => { setViewModal(false); openEdit(activeTask); }} className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl shadow-[0_8px_20px_-4px_rgba(79,70,229,0.3)] transition ml-2">Edit Operations</button>
+                    )}
+                </>}
+            >
+                {activeTask && (
+                    <div className="p-2 space-y-6">
+                        <div>
+                            <h2 className="text-3xl font-black text-slate-800 leading-tight mb-3">{activeTask.title}</h2>
+                            <div className="flex flex-wrap gap-2">
+                                <span className={`text-[11px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg ${PRIORITY_COLORS[activeTask.priority]} bg-slate-50 shadow-sm border border-slate-100`}>{activeTask.priority} Priority</span>
+                                <span className={`text-[11px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg shadow-sm ${COL_COLORS[activeTask.status]}`}>{activeTask.status}</span>
+                            </div>
+                        </div>
+
+                        <div className="bg-slate-50/70 p-6 rounded-[20px] border border-slate-100/80 shadow-inner">
+                            <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                <Target className="w-4 h-4 text-indigo-400" /> Operational Details
+                            </h4>
+                            <p className="text-[15px] font-medium text-slate-700 leading-relaxed whitespace-pre-wrap">{activeTask.description || 'No detailed instructions provided.'}</p>
+                        </div>
+
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.02)]">
+                                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Assigned To</h4>
+                                <div className="flex items-center gap-2">
+                                    <div className="w-6 h-6 rounded-md bg-gradient-to-br from-indigo-500 to-sky-400 flex items-center justify-center text-[10px] text-white font-black shadow-sm">{activeTask.assignedTo?.name?.charAt(0) || '?'}</div>
+                                    <p className="text-[13px] font-bold text-slate-800">{activeTask.assignedTo?.name || 'Unassigned'}</p>
+                                </div>
+                            </div>
+
+                            <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.02)]">
+                                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Target Deadline</h4>
+                                <div className="flex items-center gap-2">
+                                    <Clock className="w-4 h-4 text-slate-400" />
+                                    <p className="text-[13px] font-bold text-slate-800">{activeTask.dueDate ? new Date(activeTask.dueDate).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Open-Ended'}</p>
+                                </div>
+                            </div>
+                            
+                            {activeTask.relatedProject && (
+                                <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.02)]">
+                                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Project Stream</h4>
+                                    <p className="text-[13px] font-bold text-indigo-600 line-clamp-1">{activeTask.relatedProject.name}</p>
+                                </div>
+                            )}
+
+                            {activeTask.relatedClient && (
+                                <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.02)]">
+                                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Client Nexus</h4>
+                                    <p className="text-[13px] font-bold text-emerald-600 line-clamp-1">{activeTask.relatedClient.name}</p>
+                                </div>
+                            )}
+                            
+                            {activeTask.estimatedHours > 0 && (
+                                <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.02)]">
+                                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Est. Time</h4>
+                                    <p className="text-[13px] font-bold text-slate-800">{activeTask.estimatedHours} Hours</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
             </Modal>
         </div>
     );
