@@ -16,6 +16,7 @@ import Tasks from './pages/Tasks';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
 import Salary from './pages/Salary';
+import DailyChecklist from './pages/DailyChecklist';
 
 const ProtectedRoute = ({ children }) => {
     const { user, loading } = useAuth();
@@ -50,6 +51,7 @@ function App() {
                 {/* Restricted Routes — Financial Suite, Analytics, Reports blocked for sales & developer */}
                 <Route path="/payments" element={<RoleRoute restrictedRoles={['sales', 'developer', 'client']}><Payments /></RoleRoute>} />
                 <Route path="/salary" element={<RoleRoute restrictedRoles={['sales', 'developer', 'client']}><Salary /></RoleRoute>} />
+                <Route path="/daily-record" element={<RoleRoute restrictedRoles={['sales', 'developer', 'client']}><DailyChecklist /></RoleRoute>} />
                 <Route path="/analytics" element={<RoleRoute restrictedRoles={['sales', 'developer', 'client']}><Analytics /></RoleRoute>} />
                 <Route path="/reports" element={<RoleRoute restrictedRoles={['sales', 'developer', 'client']}><Reports /></RoleRoute>} />
 

@@ -16,10 +16,11 @@ const COL_COLORS = {
 };
 const PRIORITY_COLORS = { Low: 'text-slate-400', Medium: 'text-indigo-500', High: 'text-orange-500', Urgent: 'text-red-500' };
 
-const emptyForm = { title: '', description: '', assignedTo: '', status: 'To Do', priority: 'Medium', dueDate: '', estimatedHours: 0, relatedProject: '', relatedClient: '' };
+const emptyForm = { title: '', description: '', assignedTo: '', assignedToAll: false, status: 'To Do', priority: 'Medium', dueDate: '', estimatedHours: 0, relatedProject: '', relatedClient: '' };
 
 const Tasks = () => {
     const { user: currentUser } = useAuth();
+    const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'manager';
     const { raw, refreshData } = useData();
     const tasks = raw?.tasks || [];
     const projects = raw?.projects || [];
@@ -34,6 +35,7 @@ const Tasks = () => {
     const [filterUser, setFilterUser] = useState('');
     const [viewModal, setViewModal] = useState(false);
     const [activeTask, setActiveTask] = useState(null);
+    const [tab, setTab] = useState('active');
 
     useEffect(() => {
         api.get('/auth/users').then(r => setUsers(r.data)).catch(() => { });
@@ -44,7 +46,7 @@ const Tasks = () => {
     const openEdit = (t) => {
         setForm({
             ...t,
-            assignedTo: t.assignedTo?._id || '',
+            assignedTo: t.assignedToAll ? 'everybody' : (t.assignedTo?._id || ''),
             relatedProject: t.relatedProject?._id || '',
             relatedClient: t.relatedClient?._id || '',
             dueDate: t.dueDate ? t.dueDate.slice(0, 10) : '',
@@ -57,9 +59,17 @@ const Tasks = () => {
         e.preventDefault();
         try {
             const payload = { ...form };
-            if (!payload.assignedTo) delete payload.assignedTo;
-            if (!payload.relatedProject) delete payload.relatedProject;
-            if (!payload.relatedClient) delete payload.relatedClient;
+            if (payload.assignedTo === 'everybody') {
+                payload.assignedToAll = true;
+                payload.assignedTo = null;
+            } else if (!payload.assignedTo) {
+                payload.assignedToAll = false;
+                payload.assignedTo = null;
+            } else {
+                payload.assignedToAll = false;
+            }
+            if (!payload.relatedProject) payload.relatedProject = null;
+            if (!payload.relatedClient) payload.relatedClient = null;
             if (!payload.dueDate) delete payload.dueDate;
 
             if (editId) await api.put(`/tasks/${editId}`, payload);
@@ -86,25 +96,51 @@ const Tasks = () => {
         refreshData();
     };
 
+    const visibleTasks = useMemo(() => {
+        let baseTasks = tasks;
+        if (!isAdmin) {
+            baseTasks = tasks.filter(t => t.assignedToAll || (t.assignedTo?._id || t.assignedTo) === currentUser?._id);
+        }
+        if (tab === 'active') {
+            return baseTasks.filter(t => t.status !== 'Completed');
+        } else {
+            return baseTasks.filter(t => t.status === 'Completed');
+        }
+    }, [tasks, currentUser, isAdmin, tab]);
+
     const filtered = useMemo(() => {
-        return tasks.filter(t => {
+        let result = visibleTasks.filter(t => {
             if (filterProject && (t.relatedProject?._id || t.relatedProject) !== filterProject) return false;
             if (filterUser && (t.assignedTo?._id || t.assignedTo) !== filterUser) return false;
             return true;
         });
-    }, [tasks, filterProject, filterUser]);
 
+        if (!isAdmin) {
+            result.sort((a, b) => {
+                const dateA = a.dueDate ? new Date(a.dueDate) : new Date(a.createdAt);
+                const dateB = b.dueDate ? new Date(b.dueDate) : new Date(b.createdAt);
+                return dateA - dateB;
+            });
+        }
+        return result;
+    }, [visibleTasks, filterProject, filterUser, isAdmin]);
+
+    const activeView = isAdmin && tab === 'active' ? view : (isAdmin ? 'list' : 'employeeCards');
     const label = "block text-xs font-bold text-slate-500 mb-2 uppercase tracking-wide";
 
     return (
         <div className="space-y-8 animate-fadeIn">
             {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-black text-slate-800 tracking-tight">Active Objectives</h1>
-                    <p className="text-base text-slate-500 mt-1 font-medium">{tasks.length} Deployed • <span className="text-indigo-600 font-bold">{tasks.filter(t => t.status !== 'Completed').length} Pending</span></p>
+                    <h1 className="text-3xl font-black text-slate-800 tracking-tight">Operational Nexus</h1>
+                    <div className="flex items-center gap-6 mt-4">
+                        <button onClick={() => setTab('active')} className={`text-[12px] font-black uppercase tracking-widest pb-2 border-b-[3px] transition-all ${tab === 'active' ? 'text-indigo-600 border-indigo-600' : 'text-slate-400 border-transparent hover:text-slate-600'}`}>Active Operations</button>
+                        <button onClick={() => setTab('completed')} className={`text-[12px] font-black uppercase tracking-widest pb-2 border-b-[3px] transition-all ${tab === 'completed' ? 'text-emerald-600 border-emerald-600' : 'text-slate-400 border-transparent hover:text-slate-600'}`}>Archived History</button>
+                    </div>
                 </div>
             {/* Stats Cards */}
+            {isAdmin && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                 <div className="bg-white rounded-[22px] p-6 border border-slate-100/80 shadow-[0_8px_30px_rgba(0,0,0,0.02)] relative overflow-hidden group">
                     <div className="absolute -right-8 -top-8 w-24 h-24 rounded-full bg-indigo-500 opacity-[0.06] blur-2xl group-hover:opacity-[0.15] transition-all"></div>
@@ -148,18 +184,21 @@ const Tasks = () => {
                     </div>
                 </div>
             </div>
+            )}
             </div>
 
             {/* Header Extra Actions (Moved here) */}
+            {isAdmin && tab === 'active' && (
             <div className="flex justify-end gap-3">
                  <button onClick={() => setView(view === 'kanban' ? 'list' : 'kanban')} className="px-5 py-2.5 text-[13px] font-bold rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 shadow-sm transition-all uppercase tracking-wider">
                         {view === 'kanban' ? 'List Directory' : 'Kanban Stream'}
                  </button>
                  <button onClick={openAdd} className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-[13px] font-bold rounded-xl shadow-[0_8px_20px_-4px_rgba(79,70,229,0.3)] hover:-translate-y-0.5 transition-all uppercase tracking-wider">+ Authorize Task</button>
             </div>
+            )}
 
             {/* Kanban */}
-            {view === 'kanban' && (
+            {activeView === 'kanban' && isAdmin && (
                 <div className="flex gap-6 overflow-x-auto pb-6 custom-scrollbar">
                     {COLUMNS.map(col => (
                         <div key={col} className="min-w-[320px] w-[320px] shrink-0"
@@ -184,7 +223,9 @@ const Tasks = () => {
                                         {t.description && <p className="text-[13px] font-medium text-slate-500 mb-4 line-clamp-2 leading-relaxed">{t.description}</p>}
 
                                         <div className="flex items-center justify-between mt-auto border-t border-slate-100 pt-3">
-                                            {t.assignedTo ? (
+                                            {t.assignedToAll ? (
+                                                <span className="text-[11px] font-bold text-indigo-500">Everybody</span>
+                                            ) : t.assignedTo ? (
                                                 <div className="flex items-center gap-2 bg-slate-50 px-2 py-1.5 rounded-lg shadow-sm">
                                                     <div className="w-5 h-5 rounded-md bg-gradient-to-br from-indigo-500 to-sky-400 flex items-center justify-center text-[10px] text-white font-black">{t.assignedTo.name?.charAt(0)}</div>
                                                     <span className="text-[11px] font-bold text-slate-700">{t.assignedTo.name.split(' ')[0]}</span>
@@ -212,7 +253,7 @@ const Tasks = () => {
             )}
 
             {/* List */}
-            {view === 'list' && (
+            {activeView === 'list' && (
                 <div className="fw-card overflow-hidden border-transparent shadow-[0_8px_30px_rgba(0,0,0,0.04)] ring-1 ring-slate-200 animate-slideIn">
                     <div className="overflow-x-auto">
                         <table className="w-full">
@@ -223,7 +264,9 @@ const Tasks = () => {
                                 <tr key={t._id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors group cursor-pointer" onClick={() => openTaskView(t)}>
                                     <td className="px-6 py-4"><span className="font-bold text-[14px] text-slate-800">{t.title}</span></td>
                                     <td className="px-6 py-4">
-                                        {t.assignedTo ? (
+                                        {t.assignedToAll ? (
+                                            <span className="text-[13px] font-bold text-indigo-500">Everybody</span>
+                                        ) : t.assignedTo ? (
                                             <div className="flex items-center gap-2 text-[14px] font-semibold text-slate-600">
                                                 <div className="w-6 h-6 rounded-md bg-gradient-to-br from-indigo-500 to-sky-400 flex items-center justify-center text-[10px] text-white font-black shadow-sm">{t.assignedTo.name?.charAt(0)}</div>
                                                 {t.assignedTo.name}
@@ -248,6 +291,51 @@ const Tasks = () => {
                 </div>
             )}
 
+            {/* Employee Cards */}
+            {activeView === 'employeeCards' && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 animate-slideIn">
+                    {filtered.map(t => (
+                        <div key={t._id} 
+                            className="bg-white rounded-2xl border border-slate-200/80 p-5 cursor-pointer hover:-translate-y-1 hover:border-indigo-200 hover:shadow-[0_12px_24px_-8px_rgba(79,70,229,0.15)] transition-all duration-300"
+                            onClick={() => openTaskView(t)}
+                        >
+                            <div className="flex items-start justify-between gap-3 mb-2">
+                                <h4 className="font-bold text-[15px] leading-snug text-slate-800">{t.title}</h4>
+                                <span className={`text-[10px] font-black uppercase tracking-widest shrink-0 ${PRIORITY_COLORS[t.priority]}`}>{t.priority}</span>
+                            </div>
+                            {t.relatedProject && <p className="text-[11px] font-bold text-indigo-500 uppercase tracking-widest mb-3">{t.relatedProject.name}</p>}
+                            <div className="mb-4">
+                                <span className={`text-[10px] font-bold px-2 py-1 rounded inline-block ${COL_COLORS[t.status]}`}>{t.status}</span>
+                            </div>
+                            {t.description && <p className="text-[13px] font-medium text-slate-500 mb-4 line-clamp-2 leading-relaxed">{t.description}</p>}
+
+                            <div className="flex items-center justify-between mt-auto border-t border-slate-100 pt-3">
+                                {t.assignedToAll ? (
+                                    <span className="text-[11px] font-bold text-indigo-500">Everybody</span>
+                                ) : t.assignedTo ? (
+                                    <div className="flex items-center gap-2 bg-slate-50 px-2 py-1.5 rounded-lg shadow-sm">
+                                        <div className="w-5 h-5 rounded-md bg-gradient-to-br from-indigo-500 to-sky-400 flex items-center justify-center text-[10px] text-white font-black">{t.assignedTo.name?.charAt(0)}</div>
+                                        <span className="text-[11px] font-bold text-slate-700">{t.assignedTo.name.split(' ')[0]}</span>
+                                    </div>
+                                ) : <span className="text-[11px] font-bold text-slate-400 italic">Unassigned</span>}
+
+                                {t.dueDate && (
+                                    <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-500">
+                                        <Clock className="w-3.5 h-3.5" />
+                                        {new Date(t.dueDate).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    ))}
+                    {filtered.length === 0 && (
+                        <div className="col-span-full h-32 border-2 border-dashed border-slate-200 rounded-2xl flex items-center justify-center text-[14px] font-semibold text-slate-400">
+                            No operational objectives deployed for you.
+                        </div>
+                    )}
+                </div>
+            )}
+
             {/* Modal */}
             <Modal isOpen={modal} onClose={() => setModal(false)} title={editId ? 'Recalibrate Objective' : 'New Tactical Objective'} maxWidth="max-w-2xl"
                 footer={<>
@@ -260,7 +348,7 @@ const Tasks = () => {
                     <div><label className={label}>Objective Designation *</label><input required value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} className="fw-input font-bold" placeholder="Design UI Wireframes" /></div>
                     <div><label className={label}>Operational Details</label><textarea rows={3} value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} className="fw-input resize-y" placeholder="Summarize specifics of the mission..." /></div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                        <div><label className={label}>Assigned Operative</label><select value={form.assignedTo} onChange={e => setForm({ ...form, assignedTo: e.target.value })} className="fw-input cursor-pointer appearance-none select-wrapper"><option value="">Unassigned Pool</option>{users.map(u => <option key={u._id} value={u._id}>{u.name}</option>)}</select></div>
+                        <div><label className={label}>Assigned Operative</label><select value={form.assignedTo} onChange={e => setForm({ ...form, assignedTo: e.target.value })} className="fw-input cursor-pointer appearance-none select-wrapper"><option value="">Unassigned Pool</option><option value="everybody">Everybody (Global Task)</option>{users.map(u => <option key={u._id} value={u._id}>{u.name}</option>)}</select></div>
                         <div><label className={label}>Risk Priority</label><select value={form.priority} onChange={e => setForm({ ...form, priority: e.target.value })} className="fw-input cursor-pointer appearance-none select-wrapper text-slate-800 font-bold"><option>Low</option><option>Medium</option><option>High</option><option className="text-red-600">Urgent</option></select></div>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
@@ -279,10 +367,10 @@ const Tasks = () => {
             <Modal isOpen={viewModal} onClose={() => setViewModal(false)} title="Intelligence Briefing" maxWidth="max-w-3xl"
                 footer={<>
                     <button type="button" onClick={() => setViewModal(false)} className="px-6 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-sm font-bold text-slate-600 transition">Close Intel</button>
-                    {activeTask && currentUser?._id === (activeTask.assignedTo?._id || activeTask.assignedTo) && activeTask.status === 'To Do' && (
+                    {activeTask && (activeTask.assignedToAll || currentUser?._id === (activeTask.assignedTo?._id || activeTask.assignedTo)) && activeTask.status === 'To Do' && (
                         <button type="button" onClick={async () => { await updateStatus(activeTask._id, 'In Progress'); setActiveTask(null); setViewModal(false); }} className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl shadow-[0_8px_20px_-4px_rgba(37,99,235,0.3)] transition ml-2">Accept Task</button>
                     )}
-                    {activeTask && currentUser?._id === (activeTask.assignedTo?._id || activeTask.assignedTo) && ['In Progress', 'Testing', 'Client Review'].includes(activeTask.status) && (
+                    {activeTask && (activeTask.assignedToAll || currentUser?._id === (activeTask.assignedTo?._id || activeTask.assignedTo)) && ['In Progress', 'Testing', 'Client Review'].includes(activeTask.status) && (
                         <button type="button" onClick={async () => { await updateStatus(activeTask._id, 'Completed'); setActiveTask(null); setViewModal(false); }} className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-xl shadow-[0_8px_20px_-4px_rgba(16,185,129,0.3)] transition ml-2">Mark Completed</button>
                     )}
                     {(currentUser?.role === 'admin' || currentUser?.role === 'manager') && activeTask && (
@@ -311,8 +399,14 @@ const Tasks = () => {
                             <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.02)]">
                                 <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Assigned To</h4>
                                 <div className="flex items-center gap-2">
-                                    <div className="w-6 h-6 rounded-md bg-gradient-to-br from-indigo-500 to-sky-400 flex items-center justify-center text-[10px] text-white font-black shadow-sm">{activeTask.assignedTo?.name?.charAt(0) || '?'}</div>
-                                    <p className="text-[13px] font-bold text-slate-800">{activeTask.assignedTo?.name || 'Unassigned'}</p>
+                                    {activeTask.assignedToAll ? (
+                                        <p className="text-[13px] font-bold text-indigo-500">Everybody</p>
+                                    ) : activeTask.assignedTo ? (
+                                        <>
+                                            <div className="w-6 h-6 rounded-md bg-gradient-to-br from-indigo-500 to-sky-400 flex items-center justify-center text-[10px] text-white font-black shadow-sm">{activeTask.assignedTo?.name?.charAt(0) || '?'}</div>
+                                            <p className="text-[13px] font-bold text-slate-800">{activeTask.assignedTo?.name}</p>
+                                        </>
+                                    ) : <p className="text-[13px] font-bold text-slate-400 italic">Unassigned</p>}
                                 </div>
                             </div>
 

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import api from '../api';
 import { useAuth } from './AuthContext';
 import { calcCoreMetrics, buildMonthlyTimeline } from '../utils/calculations';
@@ -22,59 +22,69 @@ export const DataProvider = ({ children }) => {
     const [salaryPayments, setSalaryPayments] = useState(cached.salaryPayments || []);
 
     const [loading, setLoading] = useState(Object.keys(cached).length === 0);
+    const lastSync = useRef(0);
+    const syncLock = useRef(false);
 
-    const refreshData = useCallback(async () => {
-        if (!user) return;
+    const refreshData = useCallback(async (forced = false) => {
+        if (!user || syncLock.current) return;
+        const now = Date.now();
+        if (!forced && now - lastSync.current < 60000) return; // Prevent frequent syncs (max 1/min)
+
+        syncLock.current = true;
         try {
-            // Fetch all core entities + the stats route just for recent Activities if there's no dedicated route
-            const [leadsRes, clientsRes, projectsRes, paymentsRes, expensesRes, tasksRes, founderWithdrawalsRes, salaryConfigRes, salaryPaymentsRes, statsRes] = await Promise.all([
-                api.get('/leads').catch(() => ({ data: [] })),
-                api.get('/clients').catch(() => ({ data: [] })),
-                api.get('/projects').catch(() => ({ data: [] })),
-                api.get('/payments').catch(() => ({ data: [] })),
-                api.get('/expenses').catch(() => ({ data: [] })),
-                api.get('/tasks').catch(() => ({ data: [] })),
-                api.get('/founder-withdrawals').catch(() => ({ data: [] })),
-                api.get('/salaries/config').catch(() => ({ data: [] })),
-                api.get('/salaries/payments').catch(() => ({ data: [] })),
-                api.get('/dashboard/stats').catch(() => ({ data: { recentActivities: [] } }))
-            ]);
+            // Optimized Single-Shot Sync Fetch
+            const syncRes = await api.get('/dashboard/sync');
+            const data = syncRes.data;
 
-            setLeads(leadsRes.data || []);
-            setClients(clientsRes.data || []);
-            setProjects(projectsRes.data || []);
-            setPayments(paymentsRes.data || []);
-            setExpenses(expensesRes.data || []);
-            setTasks(tasksRes.data || []);
-            setFounderWithdrawals(founderWithdrawalsRes.data || []);
-            setSalaryConfig(salaryConfigRes.data || []);
-            setSalaryPayments(salaryPaymentsRes.data || []);
+            setLeads(data.leads || []);
+            setClients(data.clients || []);
+            setProjects(data.projects || []);
+            setPayments(data.payments || []);
+            setExpenses(data.expenses || []);
+            setTasks(data.tasks || []);
+            setRecentActivities(data.recentActivities || []);
 
-            const rActivities = statsRes.data?.recentActivities || [];
-            setRecentActivities(rActivities);
+            // Handle Financial-specific sub-routes (separately for legacy support or heavy data if needed)
+            // But for speed, try to keep them in one response or fetch only on first load
+            if (!lastSync.current) {
+                const [withdrawRes, salConfigRes, salPayRes] = await Promise.all([
+                    api.get('/founder-withdrawals').catch(() => ({ data: [] })),
+                    api.get('/salaries/config').catch(() => ({ data: [] })),
+                    api.get('/salaries/payments').catch(() => ({ data: [] }))
+                ]);
+                setFounderWithdrawals(withdrawRes.data);
+                setSalaryConfig(salConfigRes.data);
+                setSalaryPayments(salPayRes.data);
+            }
 
+            lastSync.current = Date.now();
+            
+            // Persistent Cache
             localStorage.setItem('fw_data_cache', JSON.stringify({
-                leads: leadsRes.data || [],
-                clients: clientsRes.data || [],
-                projects: projectsRes.data || [],
-                payments: paymentsRes.data || [],
-                expenses: expensesRes.data || [],
-                tasks: tasksRes.data || [],
-                recentActivities: rActivities,
-                founderWithdrawals: founderWithdrawalsRes.data || [],
-                salaryConfig: salaryConfigRes.data || [],
-                salaryPayments: salaryPaymentsRes.data || []
+                leads: data.leads || [],
+                clients: data.clients || [],
+                projects: data.projects || [],
+                payments: data.payments || [],
+                expenses: data.expenses || [],
+                tasks: data.tasks || [],
+                recentActivities: data.recentActivities || [],
+                founderWithdrawals: founderWithdrawals,
+                salaryConfig: salaryConfig,
+                salaryPayments: salaryPayments
             }));
         } catch (error) {
-            console.error('Failed to fetch global data:', error);
+            console.error('Core sync synchronization failed:', error);
         } finally {
+            syncLock.current = false;
             setLoading(false);
         }
-    }, [user]);
+    }, [user, founderWithdrawals, salaryConfig, salaryPayments]);
 
     useEffect(() => {
-        refreshData();
-        const interval = setInterval(refreshData, 10000); // 10 seconds polling for real-time feel
+        refreshData(true);
+        const interval = setInterval(() => {
+            if (document.visibilityState === 'visible') refreshData();
+        }, 120000); // Poll once every 2 minutes for passive sync
         return () => clearInterval(interval);
     }, [refreshData]);
 

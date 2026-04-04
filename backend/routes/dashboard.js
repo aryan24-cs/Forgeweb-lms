@@ -151,6 +151,49 @@ const calcCoreMetrics = (clients, leads, projects, payments, expenses, tasks, no
 
 
 // ─────────────────────────────────────────────
+// 0. GLOBAL SYNC (Initial Load Optimizer)
+// ─────────────────────────────────────────────
+router.get('/sync', auth, async (req, res) => {
+    try {
+        const isAdmin = ['admin', 'manager'].includes(req.user.role);
+        
+        // Conditional fetching based on role for speed
+        const queries = [
+            Client.find().sort('-createdAt'),
+            Project.find().sort('-createdAt'),
+            Task.find().populate('assignedTo', 'name'),
+            Activity.find().populate('user', 'name').sort('-createdAt').limit(20)
+        ];
+
+        if (isAdmin) {
+            queries.push(Lead.find().sort('-createdAt'));
+            queries.push(Payment.find().populate('client', 'name').sort('-createdAt'));
+            queries.push(Expense.find().sort('-createdAt'));
+            // Note: Withdrawals and Salaries might also be added here if needed
+        }
+
+        const results = await Promise.all(queries);
+        
+        const data = {
+            clients: results[0],
+            projects: results[1],
+            tasks: results[2],
+            recentActivities: results[3]
+        };
+
+        if (isAdmin) {
+            data.leads = results[4];
+            data.payments = results[5];
+            data.expenses = results[6];
+        }
+
+        res.json(data);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// ─────────────────────────────────────────────
 // 1. COMMAND CENTER  /dashboard/stats
 // ─────────────────────────────────────────────
 router.get('/stats', auth, async (req, res) => {
