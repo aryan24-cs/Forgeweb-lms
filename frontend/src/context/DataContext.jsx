@@ -9,18 +9,19 @@ export const DataProvider = ({ children }) => {
     const { user } = useAuth();
 
     // Raw Data State
-    const [leads, setLeads] = useState([]);
-    const [clients, setClients] = useState([]);
-    const [projects, setProjects] = useState([]);
-    const [payments, setPayments] = useState([]);
-    const [expenses, setExpenses] = useState([]);
-    const [tasks, setTasks] = useState([]);
-    const [recentActivities, setRecentActivities] = useState([]);
-    const [founderWithdrawals, setFounderWithdrawals] = useState([]);
-    const [salaryConfig, setSalaryConfig] = useState([]);
-    const [salaryPayments, setSalaryPayments] = useState([]);
+    const cached = JSON.parse(localStorage.getItem('fw_data_cache') || '{}');
+    const [leads, setLeads] = useState(cached.leads || []);
+    const [clients, setClients] = useState(cached.clients || []);
+    const [projects, setProjects] = useState(cached.projects || []);
+    const [payments, setPayments] = useState(cached.payments || []);
+    const [expenses, setExpenses] = useState(cached.expenses || []);
+    const [tasks, setTasks] = useState(cached.tasks || []);
+    const [recentActivities, setRecentActivities] = useState(cached.recentActivities || []);
+    const [founderWithdrawals, setFounderWithdrawals] = useState(cached.founderWithdrawals || []);
+    const [salaryConfig, setSalaryConfig] = useState(cached.salaryConfig || []);
+    const [salaryPayments, setSalaryPayments] = useState(cached.salaryPayments || []);
 
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(Object.keys(cached).length === 0);
 
     const refreshData = useCallback(async () => {
         if (!user) return;
@@ -49,9 +50,21 @@ export const DataProvider = ({ children }) => {
             setSalaryConfig(salaryConfigRes.data || []);
             setSalaryPayments(salaryPaymentsRes.data || []);
 
-            if (statsRes.data?.recentActivities) {
-                setRecentActivities(statsRes.data.recentActivities);
-            }
+            const rActivities = statsRes.data?.recentActivities || [];
+            setRecentActivities(rActivities);
+
+            localStorage.setItem('fw_data_cache', JSON.stringify({
+                leads: leadsRes.data || [],
+                clients: clientsRes.data || [],
+                projects: projectsRes.data || [],
+                payments: paymentsRes.data || [],
+                expenses: expensesRes.data || [],
+                tasks: tasksRes.data || [],
+                recentActivities: rActivities,
+                founderWithdrawals: founderWithdrawalsRes.data || [],
+                salaryConfig: salaryConfigRes.data || [],
+                salaryPayments: salaryPaymentsRes.data || []
+            }));
         } catch (error) {
             console.error('Failed to fetch global data:', error);
         } finally {

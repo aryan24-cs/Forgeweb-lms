@@ -1,12 +1,12 @@
 import express from 'express';
 import Lead from '../models/Lead.js';
 import Client from '../models/Client.js';
-import { auth } from '../middleware/auth.js';
+import { auth, authorize } from '../middleware/auth.js';
 import { logActivity } from '../utils/helpers.js';
 
 const router = express.Router();
 
-router.get('/', auth, async (req, res) => {
+router.get('/', auth, authorize('admin', 'manager', 'sales'), async (req, res) => {
     try {
         const { status, source, search } = req.query;
         let filter = {};
@@ -26,7 +26,7 @@ router.get('/', auth, async (req, res) => {
     }
 });
 
-router.post('/', auth, async (req, res) => {
+router.post('/', auth, authorize('admin', 'manager', 'sales'), async (req, res) => {
     try {
         const lead = await Lead.create(req.body);
         await logActivity(req.user._id, 'Created lead', 'Lead', lead._id, lead.name);
@@ -36,7 +36,7 @@ router.post('/', auth, async (req, res) => {
     }
 });
 
-router.put('/:id', auth, async (req, res) => {
+router.put('/:id', auth, authorize('admin', 'manager', 'sales'), async (req, res) => {
     try {
         const lead = await Lead.findByIdAndUpdate(req.params.id, req.body, { new: true }).populate('assignedTo', 'name');
         await logActivity(req.user._id, 'Updated lead', 'Lead', lead._id, lead.name);
@@ -46,7 +46,7 @@ router.put('/:id', auth, async (req, res) => {
     }
 });
 
-router.delete('/:id', auth, async (req, res) => {
+router.delete('/:id', auth, authorize('admin', 'manager'), async (req, res) => {
     try {
         await Lead.findByIdAndDelete(req.params.id);
         await logActivity(req.user._id, 'Deleted lead', 'Lead', req.params.id);
@@ -57,7 +57,7 @@ router.delete('/:id', auth, async (req, res) => {
 });
 
 // Convert Lead to Client
-router.post('/:id/convert', auth, async (req, res) => {
+router.post('/:id/convert', auth, authorize('admin', 'manager', 'sales'), async (req, res) => {
     try {
         const lead = await Lead.findById(req.params.id);
         if (!lead) return res.status(404).json({ message: 'Lead not found' });

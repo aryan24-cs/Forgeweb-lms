@@ -6,7 +6,7 @@ import Payment from '../models/Payment.js';
 import Task from '../models/Task.js';
 import Activity from '../models/Activity.js';
 import Expense from '../models/Expense.js';
-import { auth } from '../middleware/auth.js';
+import { auth, authorize } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -226,7 +226,7 @@ router.get('/stats', auth, async (req, res) => {
 // ─────────────────────────────────────────────
 // 2. FINANCE CENTER  /dashboard/finance
 // ─────────────────────────────────────────────
-router.get('/finance', auth, async (req, res) => {
+router.get('/finance', auth, authorize('admin', 'manager'), async (req, res) => {
     try {
         const [payments, expenses, clients, leads, projects, tasks] = await Promise.all([
             Payment.find().populate('client', 'name'),
@@ -307,7 +307,7 @@ router.get('/finance', auth, async (req, res) => {
 // ─────────────────────────────────────────────
 // 3. ANALYTICS  /dashboard/analytics
 // ─────────────────────────────────────────────
-router.get('/analytics', auth, async (req, res) => {
+router.get('/analytics', auth, authorize('admin', 'manager'), async (req, res) => {
     try {
         const [clients, leads, projects, payments, expenses, tasks] = await Promise.all([
             Client.find(), Lead.find(), Project.find(), Payment.find(), Expense.find(), Task.find()

@@ -36,9 +36,14 @@ const Sidebar = () => {
 
     const handleLogout = () => { logout(); navigate('/login'); };
 
-    const isSales = user?.role === 'sales';
+    const role = user?.role;
     const visibleNavItems = navItems.filter(item => {
-        if (isSales && ['/payments', '/salary', '/analytics', '/reports'].includes(item.to)) return false;
+        // Sales: hide financial & analytics modules
+        if (role === 'sales' && ['/payments', '/salary', '/analytics', '/reports'].includes(item.to)) return false;
+        // Developer: hide leads (CRM), financial, salary, analytics, reports
+        if (role === 'developer' && ['/leads', '/payments', '/salary', '/analytics', '/reports'].includes(item.to)) return false;
+        // Client: hide leads, financial, salary, analytics, reports
+        if (role === 'client' && ['/leads', '/payments', '/salary', '/analytics', '/reports'].includes(item.to)) return false;
         return true;
     });
 

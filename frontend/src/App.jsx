@@ -5,6 +5,7 @@ import { useAuth } from './context/AuthContext';
 import { DataProvider } from './context/DataContext';
 import Layout from './components/layout/Layout';
 import Login from './pages/Login';
+import PageLoader from './components/ui/PageLoader';
 import Dashboard from './pages/Dashboard';
 import Leads from './pages/Leads';
 import Clients from './pages/Clients';
@@ -18,14 +19,7 @@ import Salary from './pages/Salary';
 
 const ProtectedRoute = ({ children }) => {
     const { user, loading } = useAuth();
-    if (loading) return (
-        <div className="flex items-center justify-center h-screen bg-slate-50 ">
-            <div className="text-center">
-                <div className="w-10 h-10 border-3 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                <p className="text-sm text-slate-500">Loading...</p>
-            </div>
-        </div>
-    );
+    if (loading) return <PageLoader label="Authenticating Secure Session..." />;
     if (!user) return <Navigate to="/login" replace />;
     return (
         <DataProvider>
@@ -49,15 +43,15 @@ function App() {
             <Routes>
                 <Route path="/login" element={<Login />} />
                 <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-                <Route path="/leads" element={<ProtectedRoute><Leads /></ProtectedRoute>} />
+                <Route path="/leads" element={<RoleRoute restrictedRoles={['developer', 'client']}><Leads /></RoleRoute>} />
                 <Route path="/clients" element={<ProtectedRoute><Clients /></ProtectedRoute>} />
                 <Route path="/projects" element={<ProtectedRoute><Projects /></ProtectedRoute>} />
 
-                {/* Restricted Routes */}
-                <Route path="/payments" element={<RoleRoute restrictedRoles={['sales']}><Payments /></RoleRoute>} />
-                <Route path="/salary" element={<RoleRoute restrictedRoles={['sales']}><Salary /></RoleRoute>} />
-                <Route path="/analytics" element={<RoleRoute restrictedRoles={['sales']}><Analytics /></RoleRoute>} />
-                <Route path="/reports" element={<RoleRoute restrictedRoles={['sales']}><Reports /></RoleRoute>} />
+                {/* Restricted Routes — Financial Suite, Analytics, Reports blocked for sales & developer */}
+                <Route path="/payments" element={<RoleRoute restrictedRoles={['sales', 'developer', 'client']}><Payments /></RoleRoute>} />
+                <Route path="/salary" element={<RoleRoute restrictedRoles={['sales', 'developer', 'client']}><Salary /></RoleRoute>} />
+                <Route path="/analytics" element={<RoleRoute restrictedRoles={['sales', 'developer', 'client']}><Analytics /></RoleRoute>} />
+                <Route path="/reports" element={<RoleRoute restrictedRoles={['sales', 'developer', 'client']}><Reports /></RoleRoute>} />
 
                 <Route path="/tasks" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
                 <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />

@@ -3,6 +3,7 @@ import api from '../api';
 import toast from 'react-hot-toast';
 import Modal from '../components/ui/Modal';
 import { useData } from '../context/DataContext';
+import { Target, CheckCircle2, Clock } from 'lucide-react';
 
 const COLUMNS = ['To Do', 'In Progress', 'Testing', 'Client Review', 'Completed'];
 const COL_COLORS = {
@@ -98,20 +99,58 @@ const Tasks = () => {
                     <h1 className="text-3xl font-black text-slate-800 tracking-tight">Active Objectives</h1>
                     <p className="text-base text-slate-500 mt-1 font-medium">{tasks.length} Deployed • <span className="text-indigo-600 font-bold">{tasks.filter(t => t.status !== 'Completed').length} Pending</span></p>
                 </div>
-                <div className="flex items-center gap-3 flex-wrap">
-                    <select value={filterProject} onChange={e => setFilterProject(e.target.value)} className="fw-input max-w-[180px] bg-white text-[13px] font-bold cursor-pointer appearance-none select-wrapper text-slate-600">
-                        <option value="">Matrix: All Streams</option>
-                        {projects.map(p => <option key={p._id} value={p._id}>{p.name}</option>)}
-                    </select>
-                    <select value={filterUser} onChange={e => setFilterUser(e.target.value)} className="fw-input max-w-[170px] bg-white text-[13px] font-bold cursor-pointer appearance-none select-wrapper text-slate-600">
-                        <option value="">Agent: All Operatives</option>
-                        {users.map(u => <option key={u._id} value={u._id}>{u.name}</option>)}
-                    </select>
-                    <button onClick={() => setView(view === 'kanban' ? 'list' : 'kanban')} className="px-5 py-2.5 text-[13px] font-bold rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 shadow-sm transition-all uppercase tracking-wider">
-                        {view === 'kanban' ? 'List Directory' : 'Kanban Stream'}
-                    </button>
-                    <button onClick={openAdd} className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-[13px] font-bold rounded-xl shadow-[0_8px_20px_-4px_rgba(79,70,229,0.3)] hover:-translate-y-0.5 transition-all uppercase tracking-wider">+ Authorize Task</button>
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <div className="bg-white rounded-[22px] p-6 border border-slate-100/80 shadow-[0_8px_30px_rgba(0,0,0,0.02)] relative overflow-hidden group">
+                    <div className="absolute -right-8 -top-8 w-24 h-24 rounded-full bg-indigo-500 opacity-[0.06] blur-2xl group-hover:opacity-[0.15] transition-all"></div>
+                    <div className="flex justify-between items-start mb-3 relative z-10">
+                        <div className="w-11 h-11 rounded-[14px] bg-indigo-50 border border-indigo-100 flex items-center justify-center">
+                            <Target className="w-5 h-5 text-indigo-600" />
+                        </div>
+                    </div>
+                    <div className="relative z-10">
+                        <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Objectives</p>
+                        <p className="text-[26px] font-black text-slate-800 leading-none">{tasks.length}</p>
+                    </div>
                 </div>
+
+                <div className="bg-white rounded-[22px] p-6 border border-slate-100/80 shadow-[0_8px_30px_rgba(0,0,0,0.02)] relative overflow-hidden group">
+                    <div className="absolute -right-8 -top-8 w-24 h-24 rounded-full bg-emerald-500 opacity-[0.06] blur-2xl group-hover:opacity-[0.15] transition-all"></div>
+                    <div className="flex justify-between items-start mb-3 relative z-10">
+                        <div className="w-11 h-11 rounded-[14px] bg-emerald-50 border border-emerald-100 flex items-center justify-center">
+                            <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                        </div>
+                    </div>
+                    <div className="relative z-10">
+                        <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1">Completed Matrices</p>
+                        <p className="text-[26px] font-black text-slate-800 leading-none">{tasks.filter(t => t.status === 'Completed').length}</p>
+                    </div>
+                </div>
+
+                <div className="bg-white rounded-[22px] p-6 border border-slate-100/80 shadow-[0_8px_30px_rgba(0,0,0,0.02)] flex items-center justify-center relative overflow-hidden">
+                    <div className="w-full">
+                        <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2"><Clock className="w-3.5 h-3.5" /> Filter Matrix</p>
+                        <div className="flex flex-col gap-3">
+                            <select value={filterProject} onChange={e => setFilterProject(e.target.value)} className="fw-input text-[13px] font-bold text-slate-600 bg-slate-50 border-slate-200 cursor-pointer appearance-none select-wrapper">
+                                <option value="">Matrix: All Streams</option>
+                                {projects.map(p => <option key={p._id} value={p._id}>{p.name}</option>)}
+                            </select>
+                            <select value={filterUser} onChange={e => setFilterUser(e.target.value)} className="fw-input text-[13px] font-bold text-slate-600 bg-slate-50 border-slate-200 cursor-pointer appearance-none select-wrapper">
+                                <option value="">Agent: All Operatives</option>
+                                {users.map(u => <option key={u._id} value={u._id}>{u.name}</option>)}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            </div>
+
+            {/* Header Extra Actions (Moved here) */}
+            <div className="flex justify-end gap-3">
+                 <button onClick={() => setView(view === 'kanban' ? 'list' : 'kanban')} className="px-5 py-2.5 text-[13px] font-bold rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 shadow-sm transition-all uppercase tracking-wider">
+                        {view === 'kanban' ? 'List Directory' : 'Kanban Stream'}
+                 </button>
+                 <button onClick={openAdd} className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-[13px] font-bold rounded-xl shadow-[0_8px_20px_-4px_rgba(79,70,229,0.3)] hover:-translate-y-0.5 transition-all uppercase tracking-wider">+ Authorize Task</button>
             </div>
 
             {/* Kanban */}

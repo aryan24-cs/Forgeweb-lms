@@ -1,11 +1,11 @@
 import express from 'express';
 import Payment from '../models/Payment.js';
-import { auth } from '../middleware/auth.js';
+import { auth, authorize } from '../middleware/auth.js';
 import { logActivity } from '../utils/helpers.js';
 
 const router = express.Router();
 
-router.get('/', auth, async (req, res) => {
+router.get('/', auth, authorize('admin', 'manager'), async (req, res) => {
     try {
         const { month, year, status } = req.query;
         let filter = {};
@@ -49,7 +49,7 @@ router.get('/', auth, async (req, res) => {
     }
 });
 
-router.post('/', auth, async (req, res) => {
+router.post('/', auth, authorize('admin', 'manager'), async (req, res) => {
     try {
         const payment = await Payment.create(req.body);
         await logActivity(req.user._id, 'Recorded payment', 'Payment', payment._id, `₹${payment.paidAmount}`);
@@ -61,7 +61,7 @@ router.post('/', auth, async (req, res) => {
     }
 });
 
-router.put('/:id', auth, async (req, res) => {
+router.put('/:id', auth, authorize('admin', 'manager'), async (req, res) => {
     try {
         const payment = await Payment.findById(req.params.id);
         Object.assign(payment, req.body);
@@ -75,7 +75,7 @@ router.put('/:id', auth, async (req, res) => {
     }
 });
 
-router.delete('/:id', auth, async (req, res) => {
+router.delete('/:id', auth, authorize('admin', 'manager'), async (req, res) => {
     try {
         await Payment.findByIdAndDelete(req.params.id);
         await logActivity(req.user._id, 'Deleted payment', 'Payment', req.params.id);

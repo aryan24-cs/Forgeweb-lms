@@ -7,6 +7,7 @@ import { useData } from '../context/DataContext';
 const STATUS_LIST = ['New', 'Contacted', 'Qualified', 'Proposal Sent', 'Negotiation', 'Won', 'Lost'];
 const SOURCE_LIST = ['Instagram', 'Website', 'Referral', 'Cold DM', 'LinkedIn', 'Google Ads', 'Facebook', 'Other'];
 const SERVICE_LIST = ['Website', 'SEO', 'Marketing', 'Automation', 'Graphic Design', 'Social Media', 'Other'];
+import { Target, TrendingUp, Filter, Users } from 'lucide-react';
 
 const STATUS_COLORS = {
     'New': 'bg-indigo-50 text-indigo-700 border border-indigo-100',
@@ -93,16 +94,47 @@ const Leads = () => {
                 </div>
             </div>
 
-            {/* Filters */}
-            <div className="flex flex-wrap items-center gap-4 bg-white/50 backdrop-blur-md p-4 rounded-2xl border border-slate-200/50 shadow-sm">
-                <div className="relative flex-1 min-w-[200px] max-w-sm">
-                    <svg className="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                    <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search opportunities..." className="fw-input pl-11 !bg-white" />
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <div className="bg-white rounded-[22px] p-6 border border-slate-100/80 shadow-sm relative overflow-hidden group">
+                    <div className="absolute -right-8 -top-8 w-24 h-24 rounded-full bg-amber-500 opacity-[0.06] blur-2xl group-hover:opacity-[0.15] transition-all"></div>
+                    <div className="flex justify-between items-start mb-3 relative z-10">
+                        <div className="w-11 h-11 rounded-[14px] bg-amber-50 border border-amber-100 flex items-center justify-center">
+                            <Target className="w-5 h-5 text-amber-600" />
+                        </div>
+                    </div>
+                    <div className="relative z-10">
+                        <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Pipeline Value</p>
+                        <p className="text-[26px] font-black text-slate-800 leading-none">₹{leads.reduce((a, b) => a + (b.estimatedBudget || 0), 0).toLocaleString()}</p>
+                    </div>
                 </div>
-                <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="fw-input max-w-[200px] !bg-white cursor-pointer appearance-none select-wrapper">
-                    <option value="">All Stages</option>
-                    {STATUS_LIST.map(s => <option key={s}>{s}</option>)}
-                </select>
+                <div className="bg-white rounded-[22px] p-6 border border-slate-100/80 shadow-sm relative overflow-hidden group">
+                    <div className="absolute -right-8 -top-8 w-24 h-24 rounded-full bg-emerald-500 opacity-[0.06] blur-2xl group-hover:opacity-[0.15] transition-all"></div>
+                    <div className="flex justify-between items-start mb-3 relative z-10">
+                        <div className="w-11 h-11 rounded-[14px] bg-emerald-50 border border-emerald-100 flex items-center justify-center">
+                            <TrendingUp className="w-5 h-5 text-emerald-600" />
+                        </div>
+                    </div>
+                    <div className="relative z-10">
+                        <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1">Won Deals</p>
+                        <p className="text-[26px] font-black text-slate-800 leading-none">{leads.filter(l => l.status === 'Won').length}</p>
+                    </div>
+                </div>
+                <div className="bg-white rounded-[22px] p-6 border border-slate-100/80 shadow-sm flex items-center justify-center relative overflow-hidden">
+                    <div className="w-full">
+                        <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2"><Filter className="w-3.5 h-3.5" /> Filter Matrix</p>
+                        <div className="flex flex-col gap-3">
+                            <div className="relative w-full">
+                                <svg className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                                <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search opportunities..." className="fw-input pl-10 text-[13px] bg-slate-50 border-slate-200" />
+                            </div>
+                            <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="fw-input text-[13px] font-bold text-slate-600 bg-slate-50 border-slate-200 cursor-pointer appearance-none select-wrapper">
+                                <option value="">All Stages</option>
+                                {STATUS_LIST.map(s => <option key={s}>{s}</option>)}
+                            </select>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             {/* Table View */}

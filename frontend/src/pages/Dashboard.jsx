@@ -9,6 +9,7 @@ import {
     Users, Wallet, TrendingUp, FolderGit2, Target, CalendarCheck,
     Activity as ActivityIcon, ArrowUpRight, ArrowDownRight, Zap
 } from 'lucide-react';
+import PageLoader from '../components/ui/PageLoader';
 
 const PILL_COLORS = {
     emerald: { bg: 'bg-emerald-500', glow: 'shadow-emerald-500/25', light: 'bg-emerald-50', text: 'text-emerald-600', border: 'border-emerald-100' },
@@ -65,17 +66,9 @@ const KPICard = ({ label, value, icon: Icon, color = 'primary', trend, sub }) =>
 const Dashboard = () => {
     const { user } = useAuth();
     const { metrics: c, graphs: g, raw, loading } = useData();
-    const isSales = user?.role === 'sales';
+    const isRestricted = ['sales', 'developer', 'client'].includes(user?.role);
 
-    if (loading || !c) return (
-        <div className="flex items-center justify-center h-[calc(100vh-100px)]">
-            <div className="relative">
-                <div className="w-14 h-14 rounded-full border-[3px] border-slate-100" />
-                <div className="absolute inset-0 w-14 h-14 rounded-full border-[3px] border-primary border-t-transparent animate-spin" />
-                <Zap className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-5 h-5 text-primary" />
-            </div>
-        </div>
-    );
+    if (loading || !c) return <PageLoader label="Compiling Command Center Data..." />;
 
     const pieColors = {
         'Ongoing': '#f59e0b',
@@ -114,17 +107,17 @@ const Dashboard = () => {
                 <KPICard label="Total Leads" value={c.totalLeads} icon={Target} color="amber" sub={`${c.conversionRate}% conversion`} />
                 <KPICard label="Total Clients" value={c.totalClients} icon={Users} color="sky" sub={`${c.activeClients} active`} />
                 <KPICard label="Active Projects" value={c.ongoingProjects} icon={FolderGit2} color="primary" sub={`${c.totalProjects} total projects`} />
-                {!isSales && <KPICard label="Total Revenue" value={fmt(c.totalRevenue)} icon={Wallet} color="emerald" trend={c.revenueGrowth} />}
-                {!isSales && <KPICard label="Total Expenses" value={fmt(c.totalExpenses)} icon={Wallet} color="rose" sub="All time" />}
-                {!isSales && <KPICard label="Net Profit" value={fmt(c.netProfit)} icon={TrendingUp} color={c.netProfit >= 0 ? 'violet' : 'rose'} sub={`${c.profitMargin}% margin`} />}
-                {!isSales && <KPICard label="Pending Payments" value={fmt(c.pendingPayments)} icon={Wallet} color="amber" sub={`₹${c.overduePayments.toLocaleString()} overdue`} />}
+                {!isRestricted && <KPICard label="Total Revenue" value={fmt(c.totalRevenue)} icon={Wallet} color="emerald" trend={c.revenueGrowth} />}
+                {!isRestricted && <KPICard label="Total Expenses" value={fmt(c.totalExpenses)} icon={Wallet} color="rose" sub="All time" />}
+                {!isRestricted && <KPICard label="Net Profit" value={fmt(c.netProfit)} icon={TrendingUp} color={c.netProfit >= 0 ? 'violet' : 'rose'} sub={`${c.profitMargin}% margin`} />}
+                {!isRestricted && <KPICard label="Pending Payments" value={fmt(c.pendingPayments)} icon={Wallet} color="amber" sub={`₹${c.overduePayments.toLocaleString()} overdue`} />}
                 <KPICard label="Tasks Due Today" value={c.tasksDueToday} icon={CalendarCheck} color="rose" sub={`${c.pendingTasks} pending total`} />
             </div>
 
             {/* ─── CHARTS SECTION ─── */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
                 {/* Revenue Chart */}
-                {!isSales && (
+                {!isRestricted && (
                     <div className="lg:col-span-2 bg-white rounded-[22px] p-6 border border-slate-100/80 relative overflow-hidden group">
                         <div className="absolute -left-20 -top-20 w-52 h-52 bg-primary/[0.03] rounded-full blur-3xl group-hover:bg-primary/[0.06] transition-all duration-700" />
                         <h3 className="text-[14px] font-black text-[#111111] mb-5 flex items-center gap-2 relative z-10">
@@ -155,7 +148,7 @@ const Dashboard = () => {
                 )}
 
                 {/* Project Status Donut and Activity Feed right columns */}
-                <div className={`${!isSales ? 'lg:col-span-1' : 'lg:col-span-3'} flex flex-col gap-5`}>
+                <div className={`${!isRestricted ? 'lg:col-span-1' : 'lg:col-span-3'} flex flex-col gap-5`}>
                     <div className="bg-white rounded-[22px] p-6 border border-slate-100/80 shrink-0">
                         <h3 className="text-[14px] font-black text-[#111111] mb-3 flex items-center gap-2">
                             <div className="w-8 h-8 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center">

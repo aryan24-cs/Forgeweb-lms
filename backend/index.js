@@ -50,7 +50,7 @@ const syncUsers = async () => {
             { name: 'Admin', email: process.env.ADMIN_EMAIL, password: process.env.ADMIN_PASSWORD, role: 'admin' },
             { name: process.env.EMP1_NAME, email: process.env.EMP1_EMAIL, password: process.env.EMP1_PASSWORD, role: 'sales' },
             { name: process.env.EMP2_NAME, email: process.env.EMP2_EMAIL, password: process.env.EMP2_PASSWORD, role: 'sales' },
-            { name: process.env.EMP3_NAME, email: process.env.EMP3_EMAIL, password: process.env.EMP3_PASSWORD, role: 'sales' }
+            { name: process.env.EMP3_NAME, email: process.env.EMP3_EMAIL, password: process.env.EMP3_PASSWORD, role: 'developer' }
         ];
 
         for (const u of initialUsers) {

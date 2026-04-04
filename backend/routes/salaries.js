@@ -2,12 +2,12 @@ import express from 'express';
 import Salary from '../models/Salary.js';
 import SalaryPayment from '../models/SalaryPayment.js';
 import Expense from '../models/Expense.js';
-import { auth } from '../middleware/auth.js';
+import { auth, authorize } from '../middleware/auth.js';
 
 const router = express.Router();
 
 // GET all configurations
-router.get('/config', auth, async (req, res) => {
+router.get('/config', auth, authorize('admin', 'manager'), async (req, res) => {
     try {
         const salaries = await Salary.find().sort({ createdAt: -1 });
         res.json(salaries);
@@ -17,7 +17,7 @@ router.get('/config', auth, async (req, res) => {
 });
 
 // POST new config
-router.post('/config', auth, async (req, res) => {
+router.post('/config', auth, authorize('admin', 'manager'), async (req, res) => {
     try {
         const salary = new Salary(req.body);
         const saved = await salary.save();
@@ -28,7 +28,7 @@ router.post('/config', auth, async (req, res) => {
 });
 
 // PUT update config
-router.put('/config/:id', auth, async (req, res) => {
+router.put('/config/:id', auth, authorize('admin', 'manager'), async (req, res) => {
     try {
         const salary = await Salary.findByIdAndUpdate(req.params.id, req.body, { new: true });
         res.json(salary);
@@ -38,7 +38,7 @@ router.put('/config/:id', auth, async (req, res) => {
 });
 
 // GET all payments
-router.get('/payments', auth, async (req, res) => {
+router.get('/payments', auth, authorize('admin', 'manager'), async (req, res) => {
     try {
         const payments = await SalaryPayment.find().populate('addedBy', 'name').sort({ date: -1 });
         res.json(payments);
@@ -48,7 +48,7 @@ router.get('/payments', auth, async (req, res) => {
 });
 
 // POST new payment
-router.post('/payments', auth, async (req, res) => {
+router.post('/payments', auth, authorize('admin', 'manager'), async (req, res) => {
     try {
         const payment = new SalaryPayment({
             ...req.body,
@@ -76,7 +76,7 @@ router.post('/payments', auth, async (req, res) => {
 });
 
 // DELETE payment
-router.delete('/payments/:id', auth, async (req, res) => {
+router.delete('/payments/:id', auth, authorize('admin', 'manager'), async (req, res) => {
     try {
         const payment = await SalaryPayment.findById(req.params.id);
         if (!payment) return res.status(404).json({ message: 'Not found' });
