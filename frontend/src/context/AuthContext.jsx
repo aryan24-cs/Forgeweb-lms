@@ -10,14 +10,21 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const token = localStorage.getItem('fw_token');
-        const stored = localStorage.getItem('fw_user');
-        if (token && stored) {
-            try {
-                setUser(JSON.parse(stored));
-            } catch { /* ignore */ }
-        }
-        setLoading(false);
+        const verifyUser = async () => {
+            const token = localStorage.getItem('fw_token');
+            if (token) {
+                try {
+                    // Force a verify request to the backend
+                    const res = await api.get('/auth/me');
+                    setUser(res.data);
+                } catch (err) {
+                    console.error('Session expired or invalid:', err);
+                    logout(); // Clear invalid tokens
+                }
+            }
+            setLoading(false);
+        };
+        verifyUser();
     }, []);
 
     const login = async (email, password) => {

@@ -1,5 +1,8 @@
 import express from 'express';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import cors from 'cors';
+import compression from 'compression';
 import dotenv from 'dotenv';
 import connectDB from './config/db.js';
 import User from './models/User.js';
@@ -21,9 +24,13 @@ import './utils/cron.js';
 
 dotenv.config();
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+app.use(compression());
 app.use(cors({
     origin: function (origin, callback) {
         // Dynamically allow any origin (helps with Vercel/Netlify deployments)
@@ -97,6 +104,25 @@ app.use('/api/founder-withdrawals', founderWithdrawalRoutes);
 app.use('/api/salaries', SalariesRoutes);
 app.use('/api/daily-tasks', dailyTaskRoutes);
 app.use('/api/daily-records', dailyRecordRoutes);
+
+// --- Serving Frontend (Production/Shared Env) ---
+// Note: In local dev, Vite handles routing. In production/unified, this handles SPA.
+const distPath = path.join(__dirname, '../dist');
+app.use(express.static(distPath));
+
+// Catch-all route for any non-API requests to serve the frontend SPA
+app.get(/.*/, (req, res) => {
+    if (!req.path.startsWith('/api')) {
+        res.sendFile(path.join(distPath, 'index.html'), (err) => {
+            if (err) {
+                // If index.html doesn't exist, we fallback to a simple error
+                res.status(404).send("LMS Platform: Frontend not built or missing. Run 'npm run build' in frontend directory.");
+            }
+        });
+    } else {
+        res.status(404).json({ message: "API Route Not Found" });
+    }
+});
 
 if (process.env.NODE_ENV !== 'production') {
     app.listen(PORT, '0.0.0.0', () => console.log(`Server running on port ${PORT}`));
