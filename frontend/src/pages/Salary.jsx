@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import Modal from '../components/ui/Modal';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
-import { Users, Briefcase, Plus, Edit3, Trash2, DollarSign, Wallet, Calendar, Clock } from 'lucide-react';
+import { Users, Briefcase, Plus, Edit3, Trash2, DollarSign, Wallet, Calendar, Clock, RefreshCw } from 'lucide-react';
 
 const fmt = (val) => {
     if (!val || val === 0) return '₹0';
@@ -54,6 +54,7 @@ const Salary = () => {
     const [selectedConfig, setSelectedConfig] = useState(null);
     const [payForm, setPayForm] = useState({ 
         month: '', 
+        salaryMonth: '',
         fromDate: '',
         toDate: '',
         amount: 0, 
@@ -61,6 +62,8 @@ const Salary = () => {
         notes: '', 
         date: '' 
     });
+
+    const [migrating, setMigrating] = useState(false);
 
     const configData = raw?.salaryConfig || [];
     const paymentsData = raw?.salaryPayments || [];
@@ -107,21 +110,33 @@ const Salary = () => {
     const openPayModal = (c) => {
         setSelectedConfig(c);
         
-        // Auto select current month format: March 2026
         const date = new Date();
-        const monthName = date.toLocaleString('default', { month: 'long' });
-        const year = date.getFullYear();
+        const day = date.getDate();
         
-        const firstDay = new Date(year, date.getMonth(), 1).toISOString().slice(0, 10);
-        const lastDay = new Date(year, date.getMonth() + 1, 0).toISOString().slice(0, 10);
+        // Smart auto-populate: if current day <= 7, salary belongs to previous month
+        let targetDate;
+        if (day <= 7) {
+            targetDate = new Date(date.getFullYear(), date.getMonth() - 1, 1);
+        } else {
+            targetDate = new Date(date.getFullYear(), date.getMonth(), 1);
+        }
+        
+        const targetYear = targetDate.getFullYear();
+        const targetMonth = targetDate.getMonth(); // 0-indexed
+        const salaryMonth = `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}`;
+        const monthName = targetDate.toLocaleString('default', { month: 'long' });
+        
+        const firstDay = new Date(targetYear, targetMonth, 1).toISOString().slice(0, 10);
+        const lastDay = new Date(targetYear, targetMonth + 1, 0).toISOString().slice(0, 10);
 
         setPayForm({
-            month: `${monthName} ${year}`,
+            month: `${monthName} ${targetYear}`,
+            salaryMonth: salaryMonth,
             fromDate: firstDay,
             toDate: lastDay,
             amount: c.monthlySalary,
             paymentMethod: 'Bank Transfer',
-            notes: `Salary for ${monthName} ${year}`,
+            notes: `Salary for ${monthName} ${targetYear}`,
             date: new Date().toISOString().slice(0, 10)
         });
         setPaymentModal(true);
@@ -155,6 +170,21 @@ const Salary = () => {
         }
     };
 
+    // Migration: backfill salaryMonth on old records
+    const runMigration = async () => {
+        if (!window.confirm('This will backfill salaryMonth on all old salary records. Continue?')) return;
+        setMigrating(true);
+        try {
+            const res = await api.get('/salaries/migrate-salary-months');
+            toast.success(res.data.message || 'Migration complete');
+            refreshData();
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Migration failed');
+        } finally {
+            setMigrating(false);
+        }
+    };
+
     return (
         <div className="space-y-7 animate-fadeIn pb-12">
             {/* HEADER */}
@@ -169,9 +199,14 @@ const Salary = () => {
                         <p className="text-[13px] font-medium text-slate-400 mt-1">Manage employee and founder compensation</p>
                     </div>
                     {user?.role === 'admin' && (
-                        <button onClick={openConfigAdd} className="flex items-center gap-1.5 px-4 py-2.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 text-[12px] font-bold rounded-xl border border-indigo-200 transition-all">
-                            <Plus className="w-3.5 h-3.5" /> Assign New Salary
-                        </button>
+                        <div className="flex items-center gap-2.5">
+                            <button onClick={runMigration} disabled={migrating} className="flex items-center gap-1.5 px-4 py-2.5 bg-amber-50 text-amber-600 hover:bg-amber-100 text-[12px] font-bold rounded-xl border border-amber-200 transition-all disabled:opacity-50">
+                                <RefreshCw className={`w-3.5 h-3.5 ${migrating ? 'animate-spin' : ''}`} /> Fix Old Data
+                            </button>
+                            <button onClick={openConfigAdd} className="flex items-center gap-1.5 px-4 py-2.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 text-[12px] font-bold rounded-xl border border-indigo-200 transition-all">
+                                <Plus className="w-3.5 h-3.5" /> Assign New Salary
+                            </button>
+                        </div>
                     )}
                 </div>
             </div>
@@ -305,7 +340,7 @@ const Salary = () => {
                         <table className="w-full">
                             <thead>
                                 <tr className="bg-slate-50/80 border-b border-slate-100">
-                                    {['Date', 'Name', 'Role', 'Month', 'Amount', 'Method', 'Notes', 'Added By', ''].map(h => (
+                                    {['Date', 'Name', 'Role', 'Salary Month', 'Month', 'Amount', 'Method', 'Notes', 'Added By', ''].map(h => (
                                         <th key={h} className="text-left px-5 py-3.5 text-[10px] font-black text-slate-400 uppercase tracking-widest">{h}</th>
                                     ))}
                                 </tr>
@@ -316,6 +351,15 @@ const Salary = () => {
                                         <td className="px-5 py-3.5 text-[12px] font-medium text-slate-400">{p.date ? new Date(p.date).toLocaleDateString() : '—'}</td>
                                         <td className="px-5 py-3.5"><span className="font-bold text-[13px] text-slate-800">{p.personName}</span></td>
                                         <td className="px-5 py-3.5 text-[12px] font-semibold text-slate-500">{p.role}</td>
+                                        <td className="px-5 py-3.5">
+                                            {p.salaryMonth ? (
+                                                <span className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-600 border border-indigo-100">
+                                                    {p.salaryMonth}
+                                                </span>
+                                            ) : (
+                                                <span className="text-[11px] font-medium text-slate-400">—</span>
+                                            )}
+                                        </td>
                                         <td className="px-5 py-3.5 text-[12px] font-bold text-slate-700">
                                             <div className="bg-slate-50/50 rounded-lg px-2 flex flex-col gap-0.5">
                                                 <span className="text-indigo-600 block">{p.month}</span>
@@ -340,7 +384,7 @@ const Salary = () => {
                                     </tr>
                                 ))}
                                 {paymentsData.length === 0 && (
-                                    <tr><td colSpan="9" className="text-center py-16 text-slate-400 text-[13px] font-medium">No salary payments recorded yet</td></tr>
+                                    <tr><td colSpan="10" className="text-center py-16 text-slate-400 text-[13px] font-medium">No salary payments recorded yet</td></tr>
                                 )}
                             </tbody>
                         </table>
@@ -406,8 +450,15 @@ const Salary = () => {
                         </div>
 
                         <div>
-                            <label className="block text-[11px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Salary Month Label</label>
-                            <input type="text" className="fw-input py-2.5 text-sm" value={payForm.month} onChange={e => setPayForm({ ...payForm, month: e.target.value })} placeholder="e.g March 2026" required />
+                            <label className="block text-[11px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Salary Month <span className="text-rose-500">*</span></label>
+                            <input type="month" className="fw-input py-2.5 text-sm" value={payForm.salaryMonth} onChange={e => {
+                                const val = e.target.value;
+                                const [y, m] = val.split('-').map(Number);
+                                const dt = new Date(y, m - 1, 1);
+                                const monthLabel = `${dt.toLocaleString('default', { month: 'long' })} ${y}`;
+                                setPayForm({ ...payForm, salaryMonth: val, month: monthLabel, notes: `Salary for ${monthLabel}` });
+                            }} required />
+                            <p className="text-[10px] font-medium text-slate-400 mt-1">This salary will be recorded under {payForm.month || 'the selected month'}</p>
                         </div>
                         
                         <div className="grid grid-cols-2 gap-4">

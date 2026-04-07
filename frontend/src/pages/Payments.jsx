@@ -166,6 +166,10 @@ const Payments = () => {
     const filteredExpenses = useMemo(() => {
         if (selectedMonth === 'all') return expenses;
         return expenses.filter(e => {
+            // Salary expenses: use salaryMonth for filtering if available
+            if (e.category === 'Salary' && e.salaryMonth) {
+                return e.salaryMonth === selectedMonth;
+            }
             if (!e.date) return false;
             const d = new Date(e.date);
             return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` === selectedMonth;

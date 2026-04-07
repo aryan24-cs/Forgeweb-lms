@@ -11,9 +11,18 @@ router.get('/', auth, async (req, res) => {
         let filter = {};
         if (category) filter.category = category;
         if (month && year) {
+            const salaryMonthKey = `${year}-${String(month).padStart(2, '0')}`;
             const start = new Date(year, month - 1, 1);
             const end = new Date(year, month, 0, 23, 59, 59);
-            filter.date = { $gte: start, $lte: end };
+            // For salary-type expenses, match by salaryMonth field; for others, match by date
+            filter = {
+                ...filter,
+                $or: [
+                    { category: 'Salary', salaryMonth: salaryMonthKey },
+                    { category: { $ne: 'Salary' }, date: { $gte: start, $lte: end } },
+                    { category: 'Salary', salaryMonth: { $in: ['', null] }, date: { $gte: start, $lte: end } }
+                ]
+            };
         }
         const expenses = await Expense.find(filter).populate('createdBy', 'name').sort('-date');
         res.json(expenses);

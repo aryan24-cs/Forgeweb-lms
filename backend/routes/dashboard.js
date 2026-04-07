@@ -35,9 +35,16 @@ const buildMonthlyTimeline = (now, months, payments, expenses, clients, projects
     for (let i = months - 1; i >= 0; i--) {
         const { start, end } = getMonthRange(now, -i);
         const label = start.toLocaleString('default', { month: 'short', year: '2-digit' });
+        const monthKey = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}`;
 
         const mPayments = payments.filter(p => inRange(p.paymentDate, start, end));
-        const mExpenses = expenses.filter(e => inRange(e.date, start, end));
+        // Salary expenses: bucket by salaryMonth if available, otherwise by date
+        const mExpenses = expenses.filter(e => {
+            if (e.category === 'Salary' && e.salaryMonth) {
+                return e.salaryMonth === monthKey;
+            }
+            return inRange(e.date, start, end);
+        });
         const mClients = clients.filter(c => inRange(c.createdAt, start, end));
         const mProjects = projects.filter(p => inRange(p.createdAt, start, end));
         const mLeads = leads.filter(l => inRange(l.createdAt, start, end));
@@ -116,8 +123,15 @@ const calcCoreMetrics = (clients, leads, projects, payments, expenses, tasks, no
 
     // ── This Month ──
     const { start: monthStart, end: monthEnd } = getMonthRange(now);
+    const thisMonthKey = `${monthStart.getFullYear()}-${String(monthStart.getMonth() + 1).padStart(2, '0')}`;
     const thisMonthPayments = payments.filter(p => inRange(p.paymentDate, monthStart, monthEnd));
-    const thisMonthExpenses = expenses.filter(e => inRange(e.date, monthStart, monthEnd));
+    // Salary expenses: bucket by salaryMonth if available
+    const thisMonthExpenses = expenses.filter(e => {
+        if (e.category === 'Salary' && e.salaryMonth) {
+            return e.salaryMonth === thisMonthKey;
+        }
+        return inRange(e.date, monthStart, monthEnd);
+    });
     const thisMonthRevenue = sumField(thisMonthPayments, 'paidAmount');
     const thisMonthExpenseTotal = sumField(thisMonthExpenses, 'amount');
 

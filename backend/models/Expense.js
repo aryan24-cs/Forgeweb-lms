@@ -15,6 +15,7 @@ const expenseSchema = new mongoose.Schema({
     vendor: { type: String, default: '' },
     receipt: { type: String, default: '' },
     paidBy: { type: String, default: '' },
+    salaryMonth: { type: String, default: '' }, // YYYY-MM format, only for salary-type expenses
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 }, { timestamps: true });
 

@@ -44,18 +44,15 @@ export const DataProvider = ({ children }) => {
             setTasks(data.tasks || []);
             setRecentActivities(data.recentActivities || []);
 
-            // Handle Financial-specific sub-routes (separately for legacy support or heavy data if needed)
-            // But for speed, try to keep them in one response or fetch only on first load
-            if (!lastSync.current) {
-                const [withdrawRes, salConfigRes, salPayRes] = await Promise.all([
-                    api.get('/founder-withdrawals').catch(() => ({ data: [] })),
-                    api.get('/salaries/config').catch(() => ({ data: [] })),
-                    api.get('/salaries/payments').catch(() => ({ data: [] }))
-                ]);
-                setFounderWithdrawals(withdrawRes.data);
-                setSalaryConfig(salConfigRes.data);
-                setSalaryPayments(salPayRes.data);
-            }
+            // Fetch financial sub-routes (always re-fetch to pick up migration and salary changes)
+            const [withdrawRes, salConfigRes, salPayRes] = await Promise.all([
+                api.get('/founder-withdrawals').catch(() => ({ data: [] })),
+                api.get('/salaries/config').catch(() => ({ data: [] })),
+                api.get('/salaries/payments').catch(() => ({ data: [] }))
+            ]);
+            setFounderWithdrawals(withdrawRes.data);
+            setSalaryConfig(salConfigRes.data);
+            setSalaryPayments(salPayRes.data);
 
             lastSync.current = Date.now();
             

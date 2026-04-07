@@ -1,0 +1,86 @@
+{
+  "salaryPayments": [
+    {
+      "person": "Anuj Dubey",
+      "paidDate": "2026-03-05",
+      "salaryMonth": "2026-02",
+      "monthLabel": "Feb 2026",
+      "amount": 700
+    },
+    {
+      "person": "vanshaj",
+      "paidDate": "2026-03-05",
+      "salaryMonth": "2026-02",
+      "monthLabel": "Feb 2026",
+      "amount": 700
+    },
+    {
+      "person": "Sunil",
+      "paidDate": "2026-03-11",
+      "salaryMonth": "2026-03",
+      "monthLabel": "Feb 2026",
+      "amount": 7500
+    },
+    {
+      "person": "Aryan",
+      "paidDate": "2026-03-11",
+      "salaryMonth": "2026-03",
+      "monthLabel": "Feb 2026",
+      "amount": 7500
+    },
+    {
+      "person": "Anuj Dubey",
+      "paidDate": "2026-04-03",
+      "salaryMonth": "2026-03",
+      "monthLabel": "March 2026",
+      "amount": 1200
+    },
+    {
+      "person": "vanshaj",
+      "paidDate": "2026-04-03",
+      "salaryMonth": "2026-03",
+      "monthLabel": "March 2026",
+      "amount": 2200
+    }
+  ],
+  "salaryExpenses": [
+    {
+      "title": "Employee Salary - Anuj Dubey (Feb 2026)",
+      "date": "2026-01-31",
+      "salaryMonth": "2026-02",
+      "amount": 700
+    },
+    {
+      "title": "Employee Salary - vanshaj (Feb 2026)",
+      "date": "2026-01-31",
+      "salaryMonth": "2026-02",
+      "amount": 700
+    },
+    {
+      "title": "Founder Salary - Sunil (Feb 2026)",
+      "date": "2026-02-28",
+      "salaryMonth": "2026-03",
+      "amount": 7500
+    },
+    {
+      "title": "Founder Salary - Aryan (Feb 2026)",
+      "date": "2026-02-28",
+      "salaryMonth": "2026-03",
+      "amount": 7500
+    },
+    {
+      "title": "Employee Salary - Anuj Dubey (March 2026)",
+      "date": "2026-02-28",
+      "salaryMonth": "2026-03",
+      "amount": 1200
+    },
+    {
+      "title": "Employee Salary - vanshaj (March 2026)",
+      "date": "2026-02-28",
+      "salaryMonth": "2026-03",
+      "amount": 2200
+    }
+  ],
+  "aprilExpensesByDate": [],
+  "aprilTotal": 0
+}

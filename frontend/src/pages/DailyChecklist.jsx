@@ -29,6 +29,9 @@ const DailyChecklist = () => {
     const [loading, setLoading] = useState(true);
     const [manageModal, setManageModal] = useState(false);
     
+    const todayDesktopRef = useRef(null);
+    const todayMobileRef = useRef(null);
+
     // Task Management State
     const [newTaskName, setNewTaskName] = useState('');
     const [editingTask, setEditingTask] = useState(null);
@@ -58,47 +61,75 @@ const DailyChecklist = () => {
             toast.error('Failed to load checklist data');
         } finally {
             setLoading(false);
+            // Auto scroll to today
+            setTimeout(() => {
+                if (window.innerWidth < 768 && todayMobileRef.current) {
+                    todayMobileRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                } else if (todayDesktopRef.current) {
+                    todayDesktopRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }, 300);
         }
     };
 
     const handleToggle = async (dateStr, taskId, currentStatus) => {
-        try {
-            const res = await api.put(`/daily-records/${dateStr}/toggle`, {
-                taskId,
-                completed: !currentStatus
-            });
-            
-            setRecords(prev => {
-                const idx = prev.findIndex(r => r.date === dateStr);
-                if (idx > -1) {
-                    const newRecords = [...prev];
-                    newRecords[idx] = res.data;
-                    return newRecords;
+        const newStatus = !currentStatus;
+        
+        // Optimistic UI Update
+        setRecords(prev => {
+            const idx = prev.findIndex(r => r.date === dateStr);
+            const newRecords = [...prev];
+            if (idx > -1) {
+                const record = { ...newRecords[idx], tasks: [...newRecords[idx].tasks] };
+                const taskIdx = record.tasks.findIndex(t => t.taskId === taskId);
+                if (taskIdx > -1) {
+                    record.tasks[taskIdx] = { ...record.tasks[taskIdx], completed: newStatus };
+                } else {
+                    record.tasks.push({ taskId, completed: newStatus });
                 }
-                return [...prev, res.data];
+                newRecords[idx] = record;
+            } else {
+                newRecords.push({ date: dateStr, tasks: [{ taskId, completed: newStatus }] });
+            }
+            return newRecords;
+        });
+
+        try {
+            await api.put(`/daily-records/${dateStr}/toggle`, {
+                taskId,
+                completed: newStatus
             });
         } catch (err) {
             toast.error('Update failed');
+            fetchData(); // Rollback on error
         }
     };
 
     const handleMarkAll = async (dateStr, allCompleted) => {
+        const newStatus = !allCompleted;
+        
+        // Optimistic UI Update
+        setRecords(prev => {
+            const idx = prev.findIndex(r => r.date === dateStr);
+            const newRecords = [...prev];
+            const updatedTasks = masterTasks.map(t => ({ taskId: t._id, completed: newStatus }));
+            
+            if (idx > -1) {
+                newRecords[idx] = { ...newRecords[idx], tasks: updatedTasks };
+            } else {
+                newRecords.push({ date: dateStr, tasks: updatedTasks });
+            }
+            return newRecords;
+        });
+
         try {
-            const res = await api.put(`/daily-records/${dateStr}/mark-all`, {
-                completed: !allCompleted
+            await api.put(`/daily-records/${dateStr}/mark-all`, {
+                completed: newStatus
             });
-            setRecords(prev => {
-                const idx = prev.findIndex(r => r.date === dateStr);
-                if (idx > -1) {
-                    const newRecords = [...prev];
-                    newRecords[idx] = res.data;
-                    return newRecords;
-                }
-                return [...prev, res.data];
-            });
-            toast.success(allCompleted ? 'Day unmarked' : 'Day completed!');
+            toast.success(newStatus ? 'Day completed!' : 'Day unmarked');
         } catch (err) {
             toast.error('Bulk update failed');
+            fetchData(); // Rollback on error
         }
     };
 
@@ -199,9 +230,11 @@ const DailyChecklist = () => {
                 </div>
             </div>
 
-            {/* Grid View */}
+            {/* Grid View (Desktop) & Card View (Mobile) */}
             <div className="bg-white rounded-[24px] border border-slate-100 shadow-[0_8px_30px_rgba(0,0,0,0.02)] overflow-hidden">
-                <div className="overflow-x-auto overflow-y-auto max-h-[70vh] custom-scrollbar relative">
+                
+                {/* Desktop View (Matrix) */}
+                <div className="hidden md:block overflow-x-auto overflow-y-auto max-h-[70vh] custom-scrollbar relative">
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="bg-slate-50/80 sticky top-0 z-30">
@@ -234,7 +267,7 @@ const DailyChecklist = () => {
                                 const allDone = total > 0 && done === total;
 
                                 return (
-                                    <tr key={dateStr} className={`group hover:bg-slate-50/50 transition-colors ${isDayToday ? 'bg-indigo-50/30' : ''}`}>
+                                    <tr key={dateStr} ref={isDayToday ? todayDesktopRef : null} className={`group hover:bg-slate-50/50 transition-colors ${isDayToday ? 'bg-indigo-50/30' : ''}`}>
                                         <td className={`p-4 px-6 sticky left-0 z-20 transition-all border-r border-slate-100/50 ${isDayToday ? 'bg-indigo-50/80 border-indigo-100' : 'bg-white shadow-[2px_0_8px_rgba(0,0,0,0.01)]'} group-hover:bg-slate-50`}>
                                             <div className="flex flex-col">
                                                 <div className="flex items-center gap-2">
@@ -303,6 +336,91 @@ const DailyChecklist = () => {
                         </tbody>
                     </table>
                 </div>
+
+                {/* Mobile View (Cards) */}
+                <div className="md:hidden overflow-y-auto max-h-[75vh] custom-scrollbar bg-slate-50/50 p-4 space-y-4">
+                    {daysInMonth.map((day) => {
+                        const dateStr = format(day, 'yyyy-MM-dd');
+                        const record = records.find(r => r.date === dateStr);
+                        const { done, total } = getStat(dateStr);
+                        const isDayToday = isToday(day);
+                        const isDayFuture = isAfter(day, new Date()) && !isDayToday;
+                        const isWeekend = day.getDay() === 0 || day.getDay() === 6;
+                        const allDone = total > 0 && done === total;
+
+                        return (
+                            <div key={dateStr} ref={isDayToday ? todayMobileRef : null} className={`bg-white rounded-2xl border ${isDayToday ? 'border-indigo-200 shadow-md ring-1 ring-indigo-50' : 'border-slate-100 shadow-sm'} p-4 transition-all relative overflow-hidden`}>
+                                {isDayToday && <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500"></div>}
+                                
+                                {/* Card Header */}
+                                <div className="flex items-center justify-between mb-4 border-b border-slate-50 pb-3">
+                                    <div className="flex items-center gap-3">
+                                        <div className={`w-12 h-12 rounded-xl flex flex-col items-center justify-center ${isDayToday ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-50 text-slate-700'}`}>
+                                            <span className="text-lg font-black leading-none">{format(day, 'dd')}</span>
+                                            <span className={`text-[9px] font-black uppercase tracking-widest mt-1 ${isWeekend ? 'text-rose-500' : 'text-slate-400'}`}>{format(day, 'EEE')}</span>
+                                        </div>
+                                        {isDayToday && (
+                                            <div className="px-2 py-0.5 rounded-md bg-indigo-600 text-[9px] text-white font-black uppercase tracking-widest shadow-sm animate-pulse">Live</div>
+                                        )}
+                                    </div>
+                                    <div className="flex flex-col items-end gap-2">
+                                        <div className="flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-md border border-slate-100">
+                                            <span className={`text-[10px] font-black uppercase tracking-tight ${allDone ? 'text-emerald-600' : 'text-slate-500'}`}>
+                                                {done}/{total} Done
+                                            </span>
+                                        </div>
+                                        <button 
+                                            onClick={() => handleMarkAll(dateStr, allDone)}
+                                            disabled={isDayFuture}
+                                            className={`text-[9px] font-black uppercase tracking-widest py-1 px-2.5 rounded-lg border transition-all ${isDayFuture ? 'opacity-50 cursor-not-allowed hidden' : ''}
+                                                ${allDone 
+                                                    ? 'bg-emerald-50 text-emerald-600 border-emerald-100' 
+                                                    : 'bg-white text-slate-500 border-slate-200 hover:text-indigo-600 hover:border-indigo-300'
+                                                }`}
+                                        >
+                                            {allDone ? 'Locked' : 'Mark All'}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Task List */}
+                                <div className="space-y-2">
+                                    {masterTasks.map(task => {
+                                        const taskInRecord = record?.tasks.find(rt => rt.taskId === task._id);
+                                        const isChecked = taskInRecord ? taskInRecord.completed : false;
+                                        return (
+                                            <div key={task._id} className="flex items-center justify-between group">
+                                                <span className={`text-sm font-semibold transition-colors ${isChecked ? 'text-slate-400 line-through' : 'text-slate-700'}`}>
+                                                    {task.name}
+                                                </span>
+                                                <div className="relative inline-flex items-center justify-center scale-90">
+                                                    <input 
+                                                        type="checkbox"
+                                                        checked={isChecked}
+                                                        disabled={isDayFuture}
+                                                        onChange={() => handleToggle(dateStr, task._id, isChecked)}
+                                                        className="w-7 h-7 rounded-lg text-indigo-600 border-slate-200 focus:ring-0 focus:ring-offset-0 cursor-pointer disabled:cursor-not-allowed transition-all checked:animate-pop appearance-none border-2 checked:border-0 checked:bg-indigo-600 relative overflow-hidden"
+                                                    />
+                                                    {isChecked && (
+                                                        <div className="absolute pointer-events-none text-white">
+                                                            <CheckCircle2 className="w-5 h-5" />
+                                                        </div>
+                                                    )}
+                                                    {!isChecked && !isDayFuture && (
+                                                        <div className="absolute pointer-events-none opacity-0 group-hover:opacity-10 text-slate-300">
+                                                            <Circle className="w-5 h-5 fill-current" />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+
 
                 {loading && (
                     <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] flex items-center justify-center z-50">
