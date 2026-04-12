@@ -20,6 +20,7 @@ import founderWithdrawalRoutes from './routes/founderWithdrawals.js';
 import SalariesRoutes from './routes/salaries.js';
 import dailyTaskRoutes from './routes/dailyTasks.js';
 import dailyRecordRoutes from './routes/dailyRecords.js';
+import noteRoutes from './routes/notes.js';
 import './utils/cron.js';
 
 dotenv.config();
@@ -104,6 +105,7 @@ app.use('/api/founder-withdrawals', founderWithdrawalRoutes);
 app.use('/api/salaries', SalariesRoutes);
 app.use('/api/daily-tasks', dailyTaskRoutes);
 app.use('/api/daily-records', dailyRecordRoutes);
+app.use('/api/notes', noteRoutes);
 
 // --- Serving Frontend (Production/Shared Env) ---
 // Note: In local dev, Vite handles routing. In production/unified, this handles SPA.

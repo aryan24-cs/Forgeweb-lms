@@ -19,6 +19,7 @@ const Reports = lazy(() => import('./pages/Reports'));
 const Settings = lazy(() => import('./pages/Settings'));
 const Salary = lazy(() => import('./pages/Salary'));
 const DailyChecklist = lazy(() => import('./pages/DailyChecklist'));
+const Notes = lazy(() => import('./pages/Notes'));
 
 const ProtectedRoute = ({ children }) => {
     const { user, loading } = useAuth();
@@ -41,7 +42,7 @@ function App() {
     return (
         <BrowserRouter>
             <Toaster position="top-right" toastOptions={{
-                style: { background: '#1e293b', color: '#fff', borderRadius: '12px', fontSize: '14px' },
+                style: { background: '#ffffff', color: '#111111', borderRadius: '16px', fontSize: '14px', border: '1px solid rgba(0,0,0,0.05)', boxShadow: '0 10px 30px -5px rgba(0,0,0,0.1)' },
             }} />
             <Suspense fallback={<PageLoader label="Loading Module..." />}>
                 <Routes>
@@ -59,6 +60,7 @@ function App() {
                     <Route path="/reports" element={<RoleRoute restrictedRoles={['sales', 'developer', 'client']}><Reports /></RoleRoute>} />
 
                     <Route path="/tasks" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
+                    <Route path="/notes" element={<ProtectedRoute><Notes /></ProtectedRoute>} />
                     <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
 
                     {/* Catch-all route to prevent blank pages on unknown routes */}
