@@ -83,8 +83,8 @@ const Sidebar = () => {
                     {collapsed ? (
                         <div className="w-10 h-10 rounded-[14px] bg-[#111111] flex items-center justify-center text-white font-black text-lg shrink-0 shadow-lg shadow-black/20">F</div>
                     ) : (
-                        <div className="flex items-center w-[200px] -ml-2">
-                            <img src={logoImg} alt="ForgeWeb Logo" className="h-[120px] w-auto object-contain mix-blend-multiply origin-left scale-[1.2] pointer-events-none" />
+                        <div className="flex items-center w-[180px]">
+                            <img src={logoImg} alt="ForgeWeb Logo" className="h-[70px] w-auto object-contain mix-blend-multiply pointer-events-none" />
                         </div>
                     )}
                 </div>

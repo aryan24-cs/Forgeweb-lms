@@ -32,8 +32,8 @@ const Login = () => {
                 <div className="w-full max-w-[420px] animate-slideIn">
                     {/* Logo Section */}
                     <div className="mb-6 lg:mb-8">
-                        <div className="-ml-6 -mt-8 mb-1">
-                            <img src={logoImg} alt="ForgeWeb Logo" className="h-[130px] w-auto object-contain mix-blend-multiply pointer-events-none origin-left scale-[1.2]" />
+                        <div className="mb-2">
+                            <img src={logoImg} alt="ForgeWeb Logo" className="h-[60px] mb-5 w-auto object-contain mix-blend-multiply pointer-events-none" />
                         </div>
                         <h1 className="text-4xl sm:text-5xl font-black tracking-tight mb-2 text-[#111111]">Welcome <span className="font-serif italic text-primary font-normal">Back</span></h1>
                         <p className="text-slate-500 font-medium text-lg mt-3">Please enter your details to sign in.</p>
