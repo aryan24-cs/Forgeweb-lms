@@ -4,14 +4,25 @@ import toast from 'react-hot-toast';
 import Modal from '../components/ui/Modal';
 import { useAuth } from '../context/AuthContext';
 
-const ROLES = ['admin', 'manager', 'sales', 'developer', 'client'];
-const ROLE_LABELS = { admin: 'Admin', manager: 'Project Manager', sales: 'Sales', developer: 'Developer', client: 'Client' };
+const ROLES = ['admin', 'manager', 'sales', 'developer', 'client', 'employee', 'intern'];
+const DISPLAY_ROLES = ['admin', 'manager', 'sales', 'developer', 'intern'];
+const ROLE_LABELS = { 
+    admin: 'Admin', 
+    manager: 'Project Manager', 
+    sales: 'Sales', 
+    developer: 'Developer', 
+    client: 'Client',
+    employee: 'Employee',
+    intern: 'Intern'
+};
 const ROLE_COLORS = {
     admin: 'bg-red-50 text-red-600 border border-red-100',
     manager: 'bg-indigo-50 text-indigo-600 border border-indigo-100',
     sales: 'bg-sky-50 text-sky-600 border border-sky-100',
     developer: 'bg-emerald-50 text-emerald-600 border border-emerald-100',
     client: 'bg-amber-50 text-amber-600 border border-amber-100',
+    employee: 'bg-purple-50 text-purple-600 border border-purple-100',
+    intern: 'bg-pink-50 text-pink-600 border border-pink-100',
 };
 const ROLE_PERMISSIONS = {
     admin: ['Full access to all modules', 'Manage users & roles', 'View & edit finances', 'Delete records', 'System settings'],
@@ -19,21 +30,36 @@ const ROLE_PERMISSIONS = {
     sales: ['Manage leads', 'View clients', 'View projects', 'Create tasks'],
     developer: ['View assigned tasks', 'Update task status', 'Upload files', 'Log hours'],
     client: ['View own project progress', 'View milestones', 'Upload files', 'View invoices', 'Approve deliverables'],
+    employee: ['Standard employee access', 'Manage tasks', 'View assigned projects'],
+    intern: ['Limited intern access', 'Update tasks', 'Learning track'],
 };
 
 const Settings = () => {
-    const { user } = useAuth();
-    const [tab, setTab] = useState('general');
+    const { user, login } = useAuth(); // Need login to update context user after save
+    const [tab, setTab] = useState(user?.role === 'admin' || user?.role === 'manager' ? 'general' : 'profile');
     const [users, setUsers] = useState([]);
     const [settings, setSettings] = useState({ agencyName: '', monthlyExpenses: 0 });
     const [userModal, setUserModal] = useState(false);
     const [editUserId, setEditUserId] = useState(null);
-    const [userForm, setUserForm] = useState({ name: '', email: '', password: '', role: 'sales' });
+    const [userForm, setUserForm] = useState({ 
+        name: '', 
+        email: '', 
+        password: '', 
+        avatar: '',
+        role: 'sales',
+        joiningDate: new Date().toISOString().split('T')[0],
+        internshipDuration: '',
+        internshipEndDate: ''
+    });
 
     const fetchUsers = () => api.get('/auth/users').then(r => setUsers(r.data)).catch(console.error);
     const fetchSettings = () => api.get('/settings').then(r => { if (r.data) setSettings(r.data); }).catch(() => { });
 
-    useEffect(() => { fetchUsers(); fetchSettings(); }, []);
+    useEffect(() => { 
+        if (user?.role === 'admin' || user?.role === 'manager') {
+            fetchUsers(); fetchSettings(); 
+        }
+    }, [user]);
 
     const saveSettings = async () => {
         try {
@@ -42,8 +68,32 @@ const Settings = () => {
         } catch { toast.error('Failed to update Settings'); }
     };
 
-    const openAddUser = () => { setUserForm({ name: '', email: '', password: '', role: 'sales' }); setEditUserId(null); setUserModal(true); };
-    const openEditUser = (u) => { setUserForm({ name: u.name, email: u.email, password: '', role: u.role }); setEditUserId(u._id); setUserModal(true); };
+    const openAddUser = () => { 
+        setUserForm({ 
+            name: '', 
+            email: '', 
+            password: '', 
+            role: 'sales',
+            joiningDate: new Date().toISOString().split('T')[0],
+            internshipDuration: '',
+            internshipEndDate: ''
+        }); 
+        setEditUserId(null); 
+        setUserModal(true); 
+    };
+    const openEditUser = (u) => { 
+        setUserForm({ 
+            name: u.name, 
+            email: u.email, 
+            password: u.plainPassword || '', 
+            role: u.role,
+            joiningDate: u.joiningDate ? new Date(u.joiningDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+            internshipDuration: u.internshipDuration || '',
+            internshipEndDate: u.internshipEndDate ? new Date(u.internshipEndDate).toISOString().split('T')[0] : ''
+        }); 
+        setEditUserId(u._id); 
+        setUserModal(true); 
+    };
 
     const saveUser = async (e) => {
         e.preventDefault();
@@ -57,10 +107,38 @@ const Settings = () => {
         } catch (err) { toast.error(err.response?.data?.message || 'Failed processing user'); }
     };
 
+    const [profileForm, setProfileForm] = useState({ name: user?.name || '', password: '', avatar: user?.avatar || '' });
+    const saveProfile = async (e) => {
+        e.preventDefault();
+        try {
+            const body = { name: profileForm.name, avatar: profileForm.avatar };
+            if (profileForm.password) body.password = profileForm.password;
+            const res = await api.put(`/auth/users/${user._id}`, body);
+            // Update auth context
+            const token = localStorage.getItem('token');
+            if (token) login(token, res.data); // Keep user session alive with new data
+            toast.success('Profile updated successfully');
+            setProfileForm({ ...profileForm, password: '' });
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Failed to update profile');
+        }
+    };
+
     const toggleActive = async (u) => {
         await api.put(`/auth/users/${u._id}`, { isActive: !u.isActive });
         toast.success(`User ${u.isActive ? 'deactivated' : 'activated'}`);
         fetchUsers();
+    };
+
+    const deleteUser = async (id) => {
+        if (!window.confirm('Are you absolutely sure? This user will be purged from the database.')) return;
+        try {
+            await api.delete(`/auth/users/${id}`);
+            toast.success('User permanently deleted');
+            fetchUsers();
+        } catch {
+            toast.error('Failed to delete user');
+        }
     };
 
     const label = "block text-xs font-bold text-slate-500 mb-2 uppercase tracking-wide";
@@ -72,12 +150,73 @@ const Settings = () => {
                 <p className="text-base text-slate-500 mt-1 font-medium">Fine-tune the platform, manage access roles, and invite your team.</p>
             </div>
 
-            {/* Premium Tabs */}
-            <div className="flex gap-2 border-b border-slate-200/60 pb-1">
-                {['general', 'users', 'roles', 'permissions'].map(t => (
-                    <button key={t} onClick={() => setTab(t)} className={`px-5 py-2.5 text-[14px] font-bold capitalize rounded-xl transition-all duration-200 ${tab === t ? 'bg-indigo-50 text-indigo-600 shadow-sm' : 'text-slate-500 hover hover '}`}>{t}</button>
+            {/* Tabs */}
+            <div className="flex gap-2 border-b border-slate-200/60 pb-1 overflow-x-auto hide-scrollbar">
+                {(user?.role === 'admin' || user?.role === 'manager' ? ['general', 'users', 'roles', 'permissions', 'profile'] : ['profile']).map(t => (
+                    <button key={t} onClick={() => setTab(t)} className={`px-5 py-2.5 text-[14px] font-bold capitalize rounded-xl transition-all duration-200 shrink-0 ${tab === t ? 'bg-indigo-50 text-indigo-600 shadow-sm' : 'text-slate-500 hover:bg-slate-50 hover:text-indigo-500'}`}>{t}</button>
                 ))}
             </div>
+
+            {/* Profile Tab (For everyone) */}
+            {tab === 'profile' && (
+                <div className="max-w-2xl space-y-6 animate-slideIn">
+                    <form onSubmit={saveProfile} className="fw-card p-8 space-y-6">
+                        <div className="flex items-center gap-6 pb-6 border-b border-slate-100">
+                            <div className="relative group">
+                                {profileForm.avatar ? (
+                                    <img src={profileForm.avatar} alt="Avatar" className="w-20 h-20 rounded-full object-cover shadow-sm border border-slate-200" />
+                                ) : (
+                                    <div className="w-20 h-20 rounded-full bg-gradient-to-br from-indigo-500 to-sky-400 flex items-center justify-center text-white text-3xl font-black shadow-lg shadow-indigo-500/20">
+                                        {profileForm.name?.charAt(0) || user?.name?.charAt(0) || '?'}
+                                    </div>
+                                )}
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-black text-slate-800">{user?.email}</h3>
+                                <p className="text-sm font-bold text-slate-500 uppercase tracking-widest mt-1">{ROLE_LABELS[user?.role]}</p>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div><label className={label}>Display Name</label><input required value={profileForm.name} onChange={e => setProfileForm({ ...profileForm, name: e.target.value })} className="fw-input" placeholder="Your full name" /></div>
+                            
+                            <div>
+                                <label className={label}>Profile Picture</label>
+                                <div className="flex items-center gap-4 mt-2">
+                                    <label className="cursor-pointer px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-[13px] font-bold text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-100 transition-all flex items-center gap-2">
+                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                                        Upload from Device
+                                        <input 
+                                            type="file" 
+                                            accept="image/*" 
+                                            className="hidden" 
+                                            onChange={(e) => {
+                                                const file = e.target.files[0];
+                                                if (file) {
+                                                    if (file.size > 2 * 1024 * 1024) {
+                                                        toast.error('Image must be less than 2MB');
+                                                        return;
+                                                    }
+                                                    const reader = new FileReader();
+                                                    reader.onloadend = () => setProfileForm({ ...profileForm, avatar: reader.result });
+                                                    reader.readAsDataURL(file);
+                                                }
+                                            }} 
+                                        />
+                                    </label>
+                                    {profileForm.avatar && (
+                                        <button type="button" onClick={() => setProfileForm({ ...profileForm, avatar: '' })} className="text-[12px] font-bold text-red-500 hover:text-red-600 transition-colors">Remove Photo</button>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div><label className={label}>New Password (leave blank to keep current)</label><input type="password" value={profileForm.password} onChange={e => setProfileForm({ ...profileForm, password: e.target.value })} className="fw-input" placeholder="••••••••" /></div>
+                        </div>
+
+                        <div className="pt-4"><button type="submit" className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white text-[14px] font-bold rounded-xl shadow-[0_8px_20px_-4px_rgba(79,70,229,0.3)] transition-all">Save Profile</button></div>
+                    </form>
+                </div>
+            )}
 
             {/* General */}
             {tab === 'general' && (
@@ -122,6 +261,16 @@ const Settings = () => {
                                         <div>
                                             <h4 className="font-bold text-[16px] text-slate-800 leading-tight mb-1">{u.name}</h4>
                                             <p className="text-[13px] font-medium text-slate-500">{u.email}</p>
+                                            {user?.role === 'admin' && (
+                                                <div className="flex items-center gap-1.5 mt-1.5">
+                                                    <svg className="w-3 h-3 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>
+                                                    {u.plainPassword ? (
+                                                        <span className="text-[11px] font-mono font-bold text-slate-500 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-100 select-all">{u.plainPassword}</span>
+                                                    ) : (
+                                                        <span className="text-[11px] font-bold text-amber-500 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-100">Password not set — click Edit to set</span>
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -133,9 +282,30 @@ const Settings = () => {
                                                 {u.isActive ? 'Suspend' : 'Activate'}
                                             </button>
                                             <button onClick={() => openEditUser(u)} className="text-[11px] font-bold px-3 py-1.5 rounded-lg bg-slate-50 text-slate-600 hover transition">Edit</button>
+                                            <button onClick={() => deleteUser(u._id)} className="text-[11px] font-bold px-3 py-1.5 rounded-lg bg-red-50 text-red-600 hover transition">Delete</button>
                                         </div>
                                     )}
                                 </div>
+                                {(u.role === 'intern' || u.role === 'employee') && (
+                                    <div className="mt-4 pt-4 border-t border-dashed border-slate-100 flex flex-wrap gap-4">
+                                        <div>
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Joined On</p>
+                                            <p className="text-[12px] font-bold text-slate-700">{u.joiningDate ? new Date(u.joiningDate).toLocaleDateString() : 'N/A'}</p>
+                                        </div>
+                                        {u.role === 'intern' && (
+                                            <>
+                                                <div>
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Duration</p>
+                                                    <p className="text-[12px] font-bold text-slate-700">{u.internshipDuration || 'N/A'}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Ends On</p>
+                                                    <p className="text-[12px] font-bold text-slate-700">{u.internshipEndDate ? new Date(u.internshipEndDate).toLocaleDateString() : 'N/A'}</p>
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         ))}
                     </div>
@@ -145,7 +315,7 @@ const Settings = () => {
             {/* Roles */}
             {tab === 'roles' && (
                 <div className="grid grid-cols-1 lg xl gap-6 animate-slideIn">
-                    {ROLES.map(role => (
+                    {DISPLAY_ROLES.map(role => (
                         <div key={role} className="fw-card p-8 flex flex-col h-full">
                             <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
                                 <span className={`text-[12px] font-black px-4 py-1.5 rounded-xl uppercase tracking-widest ${ROLE_COLORS[role]}`}>{ROLE_LABELS[role]}</span>
@@ -173,23 +343,23 @@ const Settings = () => {
                         <table className="w-full">
                             <thead><tr className="bg-slate-50/80 border-b border-slate-200">
                                 <th className="text-left px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Platform Module</th>
-                                {ROLES.map(r => <th key={r} className="text-center px-4 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">{ROLE_LABELS[r]}</th>)}
+                                {DISPLAY_ROLES.map(r => <th key={r} className="text-center px-4 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">{ROLE_LABELS[r]}</th>)}
                             </tr></thead>
                             <tbody>
                                 {[
-                                    { module: 'Dashboard intelligence', perms: { admin: 'full', manager: 'full', sales: 'limited', developer: 'limited', client: 'own' } },
-                                    { module: 'Sales Pipeline (CRM)', perms: { admin: 'full', manager: 'full', sales: 'full', developer: 'none', client: 'none' } },
-                                    { module: 'Client Roster', perms: { admin: 'full', manager: 'full', sales: 'view', developer: 'view', client: 'own' } },
-                                    { module: 'Project Vaults', perms: { admin: 'full', manager: 'full', sales: 'view', developer: 'assigned', client: 'own' } },
-                                    { module: 'Task Delegation', perms: { admin: 'full', manager: 'full', sales: 'create', developer: 'assigned', client: 'none' } },
-                                    { module: 'Financial Suite', perms: { admin: 'full', manager: 'view', sales: 'none', developer: 'none', client: 'invoices' } },
-                                    { module: 'Global Analytics', perms: { admin: 'full', manager: 'full', sales: 'none', developer: 'none', client: 'none' } },
-                                    { module: 'Access Protocol', perms: { admin: 'full', manager: 'limited', sales: 'own', developer: 'own', client: 'own' } },
+                                    { module: 'Dashboard intelligence', perms: { admin: 'full', manager: 'full', sales: 'limited', developer: 'limited', client: 'own', intern: 'limited' } },
+                                    { module: 'Sales Pipeline (CRM)', perms: { admin: 'full', manager: 'full', sales: 'full', developer: 'none', client: 'none', intern: 'none' } },
+                                    { module: 'Client Roster', perms: { admin: 'full', manager: 'full', sales: 'view', developer: 'view', client: 'own', intern: 'none' } },
+                                    { module: 'Project Vaults', perms: { admin: 'full', manager: 'full', sales: 'view', developer: 'assigned', client: 'own', intern: 'none' } },
+                                    { module: 'Task Delegation', perms: { admin: 'full', manager: 'full', sales: 'create', developer: 'assigned', client: 'none', intern: 'assigned' } },
+                                    { module: 'Financial Suite', perms: { admin: 'full', manager: 'view', sales: 'none', developer: 'none', client: 'invoices', intern: 'none' } },
+                                    { module: 'Global Analytics', perms: { admin: 'full', manager: 'full', sales: 'none', developer: 'none', client: 'none', intern: 'none' } },
+                                    { module: 'Access Protocol', perms: { admin: 'full', manager: 'limited', sales: 'own', developer: 'own', client: 'own', intern: 'own' } },
                                 ].map((row, i) => (
                                     <tr key={i} className="border-b border-slate-50 hover transition-colors">
                                         <td className="px-6 py-4 text-[14px] font-bold text-slate-800">{row.module}</td>
-                                        {ROLES.map(r => {
-                                            const p = row.perms[r];
+                                        {DISPLAY_ROLES.map(r => {
+                                            const p = row.perms[r] || 'none';
                                             const style = p === 'full' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
                                                 p === 'none' ? 'bg-red-50 text-red-600 border border-red-100' :
                                                     'bg-amber-50 text-amber-600 border border-amber-100';
@@ -213,12 +383,24 @@ const Settings = () => {
                 <form id="user-form" onSubmit={saveUser} className="space-y-5 px-1 py-1">
                     <div><label className={label}>Identified Name</label><input required value={userForm.name} onChange={e => setUserForm({ ...userForm, name: e.target.value })} className="fw-input" placeholder="E.g. John Doe" /></div>
                     <div><label className={label}>Corporate Email</label><input required type="email" value={userForm.email} onChange={e => setUserForm({ ...userForm, email: e.target.value })} className="fw-input" placeholder="john@agency.com" /></div>
-                    <div><label className={label}>{editUserId ? 'Override Security Key (Blank to bypass)' : 'Initial Security Key'}</label><input type="password" value={userForm.password} onChange={e => setUserForm({ ...userForm, password: e.target.value })} className="fw-input" placeholder="••••••••" {...(!editUserId ? { required: true } : {})} /></div>
+                    <div><label className={label}>{editUserId ? 'Password (change or keep current)' : 'Login Password'}</label><input type="text" value={userForm.password} onChange={e => setUserForm({ ...userForm, password: e.target.value })} className="fw-input font-mono" placeholder="Enter password" {...(!editUserId ? { required: true } : {})} /></div>
                     <div><label className={label}>Assigned Role Tier</label>
                         <select value={userForm.role} onChange={e => setUserForm({ ...userForm, role: e.target.value })} className="fw-input appearance-none bg-slate-50 focus cursor-pointer select-wrapper relative">
                             {ROLES.map(r => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
                         </select>
                     </div>
+
+                    {(userForm.role === 'employee' || userForm.role === 'intern') && (
+                        <div className="grid grid-cols-2 gap-4 animate-fadeIn">
+                            <div className="col-span-2"><label className={label}>Joining Date</label><input type="date" value={userForm.joiningDate} onChange={e => setUserForm({ ...userForm, joiningDate: e.target.value })} className="fw-input" /></div>
+                            {userForm.role === 'intern' && (
+                                <>
+                                    <div><label className={label}>Duration</label><input value={userForm.internshipDuration} onChange={e => setUserForm({ ...userForm, internshipDuration: e.target.value })} className="fw-input" placeholder="e.g. 3 Months" /></div>
+                                    <div><label className={label}>End Date</label><input type="date" value={userForm.internshipEndDate} onChange={e => setUserForm({ ...userForm, internshipEndDate: e.target.value })} className="fw-input" /></div>
+                                </>
+                            )}
+                        </div>
+                    )}
                 </form>
             </Modal>
         </div>

@@ -70,11 +70,13 @@ const Salary = () => {
 
     const employees = configData.filter(c => c.role === 'Employee');
     const founders = configData.filter(c => c.role === 'Founder');
+    const interns = configData.filter(c => c.role === 'Intern');
 
     // Metrics (based on configurations for total monthly commitment)
     const totalEmpSalary = employees.reduce((acc, curr) => acc + (curr.monthlySalary || 0), 0);
     const totalFounderSalary = founders.reduce((acc, curr) => acc + (curr.monthlySalary || 0), 0);
-    const totalMonthlySalary = totalEmpSalary + totalFounderSalary;
+    const totalInternStipend = interns.reduce((acc, curr) => acc + (curr.monthlySalary || 0), 0);
+    const totalMonthlySalary = totalEmpSalary + totalFounderSalary + totalInternStipend;
 
     // Config CRUD
     const openConfigAdd = () => {
@@ -212,10 +214,11 @@ const Salary = () => {
             </div>
 
             {/* KPI CARDS */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <FinanceCard label="Total Monthly Salaries" value={fmt(totalMonthlySalary)} icon={Wallet} color="indigo" sub="Expected total outgo" />
-                <FinanceCard label="Employee Salaries" value={fmt(totalEmpSalary)} icon={Users} color="emerald" sub="Total monthly commitment" />
-                <FinanceCard label="Founder Salaries" value={fmt(totalFounderSalary)} icon={Briefcase} color="amber" sub="Total monthly commitment" />
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                <FinanceCard label="Total Monthly Outgo" value={fmt(totalMonthlySalary)} icon={Wallet} color="indigo" sub="Salaries + Stipends" />
+                <FinanceCard label="Employee Salaries" value={fmt(totalEmpSalary)} icon={Users} color="emerald" sub="Full-time payroll" />
+                <FinanceCard label="Founder Salaries" value={fmt(totalFounderSalary)} icon={Briefcase} color="amber" sub="Core leadership" />
+                <FinanceCard label="Intern Stipends" value={fmt(totalInternStipend)} icon={Users} color="sky" sub="Active internships" />
             </div>
 
             {/* TAB NAVIGATION */}
@@ -277,6 +280,53 @@ const Salary = () => {
                                     ))}
                                     {employees.length === 0 && (
                                         <tr><td colSpan="5" className="text-center py-10 text-slate-400 text-[13px] font-medium">No employees added yet</td></tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    {/* Interns */}
+                    <div className="bg-white rounded-[22px] overflow-hidden border border-slate-100/80">
+                        <div className="px-6 py-5 border-b border-slate-100">
+                            <h3 className="text-[14px] font-black text-slate-700">Intern Stipends</h3>
+                        </div>
+                        <div className="overflow-x-auto">
+                            <table className="w-full">
+                                <thead>
+                                    <tr className="bg-slate-50/80 border-b border-slate-100">
+                                        {['Intern Name', 'Designation', 'Stipend (Monthly)', 'Status', 'Action'].map(h => (
+                                            <th key={h} className="text-left px-5 py-3.5 text-[10px] font-black text-slate-400 uppercase tracking-widest">{h}</th>
+                                        ))}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {interns.map(c => (
+                                        <tr key={c._id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+                                            <td className="px-5 py-3.5"><span className="font-bold text-[13px] text-slate-800">{c.personName}</span></td>
+                                            <td className="px-5 py-3.5 text-[12px] font-medium text-slate-500">{c.designation || '—'}</td>
+                                            <td className="px-5 py-3.5 text-[13px] font-extrabold text-sky-600">₹{c.monthlySalary?.toLocaleString()}</td>
+                                            <td className="px-5 py-3.5">
+                                                <span className={`text-[10px] font-bold px-2.5 py-1 rounded-lg ${c.status === 'Active' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-rose-50 text-rose-600 border border-rose-100'}`}>
+                                                    {c.status}
+                                                </span>
+                                            </td>
+                                            <td className="px-5 py-3.5 flex gap-2">
+                                                {user?.role === 'admin' && (
+                                                    <>
+                                                        <button onClick={() => openConfigEdit(c)} className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-50 hover:bg-indigo-50 text-slate-400 hover:text-indigo-500 transition-colors">
+                                                            <Edit3 className="w-4 h-4" />
+                                                        </button>
+                                                        <button onClick={() => openPayModal(c)} className="flex items-center gap-1 px-3 h-8 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 text-[11px] font-bold rounded-lg transition-colors">
+                                                            <DollarSign className="w-3 h-3" /> Pay Source
+                                                        </button>
+                                                    </>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {interns.length === 0 && (
+                                        <tr><td colSpan="5" className="text-center py-10 text-slate-400 text-[13px] font-medium">No interns added yet</td></tr>
                                     )}
                                 </tbody>
                             </table>
@@ -403,6 +453,7 @@ const Salary = () => {
                             <select className="fw-input py-2.5 text-sm" value={configForm.role} onChange={e => setConfigForm({ ...configForm, role: e.target.value })} required>
                                 <option value="Employee">Employee</option>
                                 <option value="Founder">Founder</option>
+                                <option value="Intern">Intern</option>
                             </select>
                         </div>
                         <div>

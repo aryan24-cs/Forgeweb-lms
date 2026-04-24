@@ -3,6 +3,7 @@ import api from '../api';
 import toast from 'react-hot-toast';
 import Modal from '../components/ui/Modal';
 import { useData } from '../context/DataContext';
+import { useAuth } from '../context/AuthContext';
 
 const emptyForm = {
     name: '', businessName: '', phone: '', email: '', address: '', gst: '',
@@ -12,6 +13,9 @@ const emptyForm = {
 };
 
 const Clients = () => {
+    const { user } = useAuth();
+    const canViewFinance = ['admin', 'manager'].includes(user?.role);
+
     const { raw, refreshData } = useData();
     const [modal, setModal] = useState(false);
     const [editId, setEditId] = useState(null);
@@ -137,7 +141,7 @@ const Clients = () => {
 
                         <div className="flex items-center gap-2 mb-6 flex-wrap">
                             <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md ${getStatusStyle(c.projectStatus)}`}>{c.projectStatus}</span>
-                            <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md ${getStatusStyle(c.paymentStatus)}`}>{c.paymentStatus}</span>
+                            {canViewFinance && <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md ${getStatusStyle(c.paymentStatus)}`}>{c.paymentStatus}</span>}
                         </div>
 
                         <div className="mt-auto border-t border-slate-100 pt-4 flex items-center justify-between">
@@ -194,14 +198,16 @@ const Clients = () => {
                             </div>
 
                             <div className="space-y-6">
-                                <div>
-                                    <h4 className="text-[14px] font-black text-slate-800 mb-4 tracking-tight border-b border-slate-100 pb-2">Fiscal & Contract</h4>
-                                    <div className="bg-slate-50/80 rounded-2xl p-5 text-[14px] space-y-3 border border-slate-100">
-                                        <div className="flex items-center justify-between border-b border-slate-200/60 pb-2"><span className="text-slate-500 font-semibold">Legal Vector</span> <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md ${getStatusStyle(detailView.client.contractStatus)}`}>{detailView.client.contractStatus}</span></div>
-                                        <div className="flex items-center justify-between border-b border-slate-200/60 pb-2"><span className="text-slate-500 font-semibold">Ledger Transfer</span> <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md ${getStatusStyle(detailView.client.paymentStatus)}`}>{detailView.client.paymentStatus}</span></div>
-                                        <div className="flex items-center justify-between"><span className="text-slate-500 font-semibold mt-1">Acquisition Power</span> <span className="font-black text-2xl text-emerald-600">₹{(detailView.client.totalDealValue || 0).toLocaleString()}</span></div>
+                                {canViewFinance && (
+                                    <div>
+                                        <h4 className="text-[14px] font-black text-slate-800 mb-4 tracking-tight border-b border-slate-100 pb-2">Fiscal & Contract</h4>
+                                        <div className="bg-slate-50/80 rounded-2xl p-5 text-[14px] space-y-3 border border-slate-100">
+                                            <div className="flex items-center justify-between border-b border-slate-200/60 pb-2"><span className="text-slate-500 font-semibold">Legal Vector</span> <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md ${getStatusStyle(detailView.client.contractStatus)}`}>{detailView.client.contractStatus}</span></div>
+                                            <div className="flex items-center justify-between border-b border-slate-200/60 pb-2"><span className="text-slate-500 font-semibold">Ledger Transfer</span> <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md ${getStatusStyle(detailView.client.paymentStatus)}`}>{detailView.client.paymentStatus}</span></div>
+                                            <div className="flex items-center justify-between"><span className="text-slate-500 font-semibold mt-1">Acquisition Power</span> <span className="font-black text-2xl text-emerald-600">₹{(detailView.client.totalDealValue || 0).toLocaleString()}</span></div>
+                                        </div>
                                     </div>
-                                </div>
+                                )}
 
                                 <div>
                                     <h4 className="text-[14px] font-black text-slate-800 mb-4 tracking-tight border-b border-slate-100 pb-2">Operative Attachment</h4>
@@ -298,7 +304,7 @@ const Clients = () => {
 
                     {/* Tab: Matrix Operations */}
                     {activeTab === 'projects' && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pb-4 animate-slideIn">
+                        <div className={`grid grid-cols-1 ${canViewFinance ? 'md:grid-cols-2' : ''} gap-8 pb-4 animate-slideIn`}>
                             <div>
                                 <h4 className="font-black text-[14px] text-slate-800 mb-4 pb-2 border-b border-slate-100 flex items-center justify-between">Operative Matrix <span className="text-[11px] px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-md font-black">{detailView.projects?.length || 0} Lines</span></h4>
                                 <div className="space-y-3">
@@ -311,21 +317,23 @@ const Clients = () => {
                                     {!detailView.projects?.length && <p className="text-[13px] text-slate-400 font-semibold italic text-center py-6 border-2 border-dashed border-slate-100 rounded-xl">Network dormant.</p>}
                                 </div>
                             </div>
-                            <div>
-                                <h4 className="font-black text-[14px] text-slate-800 mb-4 pb-2 border-b border-slate-100 flex items-center justify-between">Fiscal Ledger <span className="text-[11px] px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-md font-black">{detailView.payments?.length || 0} Logs</span></h4>
-                                <div className="space-y-3">
-                                    {detailView.payments?.map(p => (
-                                        <div key={p._id} className="flex justify-between items-center p-4 rounded-xl bg-white border border-slate-200 shadow-sm hover:border-emerald-200 transition-colors">
-                                            <div>
-                                                <span className="font-black text-[15px] text-emerald-600">₹{p.paidAmount?.toLocaleString()}</span>
-                                                <span className="text-slate-400 text-[12px] font-semibold tracking-wide ml-1 border-l border-slate-300 pl-1">₹{p.totalAmount?.toLocaleString()}</span>
+                            {canViewFinance && (
+                                <div>
+                                    <h4 className="font-black text-[14px] text-slate-800 mb-4 pb-2 border-b border-slate-100 flex items-center justify-between">Fiscal Ledger <span className="text-[11px] px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-md font-black">{detailView.payments?.length || 0} Logs</span></h4>
+                                    <div className="space-y-3">
+                                        {detailView.payments?.map(p => (
+                                            <div key={p._id} className="flex justify-between items-center p-4 rounded-xl bg-white border border-slate-200 shadow-sm hover:border-emerald-200 transition-colors">
+                                                <div>
+                                                    <span className="font-black text-[15px] text-emerald-600">₹{p.paidAmount?.toLocaleString()}</span>
+                                                    <span className="text-slate-400 text-[12px] font-semibold tracking-wide ml-1 border-l border-slate-300 pl-1">₹{p.totalAmount?.toLocaleString()}</span>
+                                                </div>
+                                                <span className={`text-[10px] uppercase tracking-widest font-black px-2.5 py-1 rounded-md ${getStatusStyle(p.status)}`}>{p.status}</span>
                                             </div>
-                                            <span className={`text-[10px] uppercase tracking-widest font-black px-2.5 py-1 rounded-md ${getStatusStyle(p.status)}`}>{p.status}</span>
-                                        </div>
-                                    ))}
-                                    {!detailView.payments?.length && <p className="text-[13px] text-slate-400 font-semibold italic text-center py-6 border-2 border-dashed border-slate-100 rounded-xl">Ledger pristine.</p>}
+                                        ))}
+                                        {!detailView.payments?.length && <p className="text-[13px] text-slate-400 font-semibold italic text-center py-6 border-2 border-dashed border-slate-100 rounded-xl">Ledger pristine.</p>}
+                                    </div>
                                 </div>
-                            </div>
+                            )}
                         </div>
                     )}
                 </Modal>
@@ -354,8 +362,12 @@ const Clients = () => {
                         <div><label className={label}>Legal Protocol</label><select value={form.contractStatus} onChange={e => setForm({ ...form, contractStatus: e.target.value })} className="fw-input cursor-pointer appearance-none select-wrapper"><option>Pending</option><option>Active</option><option>Completed</option><option>Cancelled</option></select></div>
                         <div><label className={label}>Phase Logic</label><select value={form.projectStatus} onChange={e => setForm({ ...form, projectStatus: e.target.value })} className="fw-input cursor-pointer appearance-none select-wrapper"><option>Not Started</option><option>In Progress</option><option>Testing</option><option>Client Review</option><option>Completed</option><option>On Hold</option></select></div>
 
-                        <div><label className={label}>Ledger Flow</label><select value={form.paymentStatus} onChange={e => setForm({ ...form, paymentStatus: e.target.value })} className="fw-input cursor-pointer appearance-none select-wrapper bg-slate-50"><option>Pending</option><option>Partial</option><option>Paid</option></select></div>
-                        <div><label className={label}>Capture Index (₹)</label><input type="number" value={form.totalDealValue} onChange={e => setForm({ ...form, totalDealValue: Number(e.target.value) })} className="fw-input font-black text-indigo-700" /></div>
+                        {canViewFinance && (
+                            <>
+                                <div><label className={label}>Ledger Flow</label><select value={form.paymentStatus} onChange={e => setForm({ ...form, paymentStatus: e.target.value })} className="fw-input cursor-pointer appearance-none select-wrapper bg-slate-50"><option>Pending</option><option>Partial</option><option>Paid</option></select></div>
+                                <div><label className={label}>Capture Index (₹)</label><input type="number" value={form.totalDealValue} onChange={e => setForm({ ...form, totalDealValue: Number(e.target.value) })} className="fw-input font-black text-indigo-700" /></div>
+                            </>
+                        )}
 
                         <div className="md:col-span-2 fw-card p-5 border border-slate-200/60"><label className={label}>Vector Fleet Attachments</label>
                             <div className="flex flex-wrap gap-3 mt-3">

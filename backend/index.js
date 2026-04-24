@@ -52,43 +52,39 @@ app.use(async (req, res, next) => {
     }
 });
 
-// Run Seed Logic in background safely
-const syncUsers = async () => {
+// Seed only admin user from env (all other users managed via Admin Panel)
+const seedAdmin = async () => {
     try {
         await connectDB();
-        const initialUsers = [
-            { name: 'Admin', email: process.env.ADMIN_EMAIL, password: process.env.ADMIN_PASSWORD, role: 'admin' },
-            { name: process.env.EMP1_NAME, email: process.env.EMP1_EMAIL, password: process.env.EMP1_PASSWORD, role: 'sales' },
-            { name: process.env.EMP2_NAME, email: process.env.EMP2_EMAIL, password: process.env.EMP2_PASSWORD, role: 'sales' },
-            { name: process.env.EMP3_NAME, email: process.env.EMP3_EMAIL, password: process.env.EMP3_PASSWORD, role: 'developer' }
-        ];
+        const adminEmail = process.env.ADMIN_EMAIL?.trim();
+        const adminPassword = process.env.ADMIN_PASSWORD;
+        if (!adminEmail || !adminPassword) return;
 
-        for (const u of initialUsers) {
-            if (!u.email || !u.password || !u.name) continue;
-            let userByName = await User.findOne({ name: u.name });
-            let userByEmail = await User.findOne({ email: u.email });
-            if (userByName) {
-                userByName.email = u.email;
-                userByName.password = u.password;
-                userByName.role = u.role;
-                await userByName.save();
-            } else if (userByEmail) {
-                userByEmail.name = u.name;
-                userByEmail.password = u.password;
-                userByEmail.role = u.role;
-                await userByEmail.save();
-            } else {
-                await User.create(u);
-            }
+        let admin = await User.findOne({ email: adminEmail });
+        if (!admin) {
+            await User.create({ 
+                name: 'Admin', 
+                email: adminEmail, 
+                password: adminPassword, 
+                plainPassword: adminPassword,
+                role: 'admin' 
+            });
+            console.log('Admin user created from .env');
+        } else {
+            // Sync admin password if changed in env
+            admin.password = adminPassword;
+            admin.plainPassword = adminPassword;
+            admin.role = 'admin';
+            await admin.save();
+            console.log('Admin user synced from .env');
         }
-        console.log('Users synced from .env');
     } catch (err) {
-        console.log('User seed skipped:', err.message);
+        console.log('Admin seed skipped:', err.message);
     }
 };
 
 if (process.env.NODE_ENV !== 'production') {
-    syncUsers();
+    seedAdmin();
 }
 
 // Routes

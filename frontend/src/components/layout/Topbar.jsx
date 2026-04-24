@@ -162,8 +162,12 @@ const Topbar = () => {
 
                 {/* Profile */}
                 <div className="flex items-center gap-3 p-1 px-1.5 rounded-2xl hover:bg-slate-50 transition-colors cursor-pointer group">
-                    <div className="w-10 h-10 rounded-[14px] bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center text-white text-sm font-black shadow-lg shadow-primary/20 transition-transform group-hover:scale-110">
-                        {user?.name?.[0] || 'A'}
+                    <div className="w-10 h-10 rounded-[14px] bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center text-white text-sm font-black shadow-lg shadow-primary/20 transition-transform group-hover:scale-110 overflow-hidden">
+                        {user?.avatar ? (
+                            <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                        ) : (
+                            user?.name?.[0] || 'A'
+                        )}
                     </div>
                     <div className="hidden lg:block text-left">
                         <p className="text-sm font-black text-[#111111] leading-none mb-1 group-hover:text-primary transition-colors">{user?.name || 'Admin'}</p>

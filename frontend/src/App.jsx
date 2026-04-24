@@ -48,16 +48,16 @@ function App() {
                 <Routes>
                     <Route path="/login" element={<Login />} />
                     <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-                    <Route path="/leads" element={<RoleRoute restrictedRoles={['developer', 'client']}><Leads /></RoleRoute>} />
-                    <Route path="/clients" element={<ProtectedRoute><Clients /></ProtectedRoute>} />
-                    <Route path="/projects" element={<ProtectedRoute><Projects /></ProtectedRoute>} />
+                    <Route path="/leads" element={<RoleRoute restrictedRoles={['developer', 'client', 'intern', 'employee']}><Leads /></RoleRoute>} />
+                    <Route path="/clients" element={<RoleRoute restrictedRoles={['intern']}><Clients /></RoleRoute>} />
+                    <Route path="/projects" element={<RoleRoute restrictedRoles={['intern']}><Projects /></RoleRoute>} />
 
                     {/* Restricted Routes — Financial Suite, Analytics, Reports blocked for sales & developer */}
-                    <Route path="/payments" element={<RoleRoute restrictedRoles={['sales', 'developer', 'client']}><Payments /></RoleRoute>} />
-                    <Route path="/salary" element={<RoleRoute restrictedRoles={['sales', 'developer', 'client']}><Salary /></RoleRoute>} />
-                    <Route path="/daily-record" element={<RoleRoute restrictedRoles={['sales', 'developer', 'client']}><DailyChecklist /></RoleRoute>} />
-                    <Route path="/analytics" element={<RoleRoute restrictedRoles={['sales', 'developer', 'client']}><Analytics /></RoleRoute>} />
-                    <Route path="/reports" element={<RoleRoute restrictedRoles={['sales', 'developer', 'client']}><Reports /></RoleRoute>} />
+                    <Route path="/payments" element={<RoleRoute restrictedRoles={['sales', 'developer', 'client', 'intern', 'employee']}><Payments /></RoleRoute>} />
+                    <Route path="/salary" element={<RoleRoute restrictedRoles={['sales', 'developer', 'client', 'intern', 'employee']}><Salary /></RoleRoute>} />
+                    <Route path="/daily-record" element={<RoleRoute restrictedRoles={['sales', 'developer', 'client', 'intern']}><DailyChecklist /></RoleRoute>} />
+                    <Route path="/analytics" element={<RoleRoute restrictedRoles={['sales', 'developer', 'client', 'intern', 'employee']}><Analytics /></RoleRoute>} />
+                    <Route path="/reports" element={<RoleRoute restrictedRoles={['sales', 'developer', 'client', 'intern', 'employee']}><Reports /></RoleRoute>} />
 
                     <Route path="/tasks" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
                     <Route path="/notes" element={<ProtectedRoute><Notes /></ProtectedRoute>} />

@@ -3,6 +3,7 @@ import api from '../api';
 import toast from 'react-hot-toast';
 import Modal from '../components/ui/Modal';
 import { useData } from '../context/DataContext';
+import { useAuth } from '../context/AuthContext';
 
 const STATUSES = ['Planning', 'In Progress', 'Testing', 'Client Review', 'Completed', 'On Hold'];
 const STATUS_COLORS = {
@@ -17,6 +18,9 @@ const STATUS_COLORS = {
 const emptyForm = { name: '', description: '', client: '', serviceType: '', totalValue: 0, startDate: '', deadline: '', status: 'Planning', teamMembers: [], deliverables: '' };
 
 const Projects = () => {
+    const { user } = useAuth();
+    const canViewFinance = ['admin', 'manager'].includes(user?.role);
+    
     const { raw, refreshData } = useData();
     const projects = raw?.projects || [];
     const clients = raw?.clients || [];
@@ -206,7 +210,7 @@ const Projects = () => {
 
                             <div className="flex items-center justify-between text-[13px] font-semibold text-slate-500 mb-4 pb-4 border-b border-slate-100">
                                 <span>{p.serviceType || 'General'}</span>
-                                <span className="font-black text-slate-800">₹{(p.totalValue || 0).toLocaleString()}</span>
+                                {canViewFinance && <span className="font-black text-slate-800">₹{(p.totalValue || 0).toLocaleString()}</span>}
                             </div>
                             <div className="flex items-center justify-between">
                                 <button onClick={(e) => { e.stopPropagation(); openEdit(p); }} className="text-[12px] font-bold text-slate-400 hover:text-indigo-600 transition-colors">Modify Specs</button>
@@ -229,7 +233,7 @@ const Projects = () => {
                         <span className={`text-[12px] font-black px-4 py-2 rounded-xl uppercase tracking-widest ${STATUS_COLORS[currentProject.status]}`}>{currentProject.status}</span>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div className={`grid grid-cols-1 ${canViewFinance ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-6 mb-8`}>
                         <div className="fw-card border-slate-100 p-6 flex flex-col items-center justify-center text-center bg-white">
                             <p className="text-[11px] text-slate-400 uppercase tracking-widest font-bold mb-2">Completion Net</p>
                             <p className="text-4xl font-black text-indigo-600">{progressCalc(currentProject)}%</p>
@@ -237,11 +241,13 @@ const Projects = () => {
                                 <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${progressCalc(currentProject)}%` }}></div>
                             </div>
                         </div>
-                        <div className="fw-card border-slate-100 p-6 flex flex-col items-center justify-center text-center bg-white">
-                            <p className="text-[11px] text-slate-400 uppercase tracking-widest font-bold mb-2">Total Yield Evaluated</p>
-                            <p className="text-3xl font-black text-slate-800">₹{(currentProject.totalValue || 0).toLocaleString()}</p>
-                            <p className="text-xs font-semibold text-emerald-500 mt-2 bg-emerald-50 px-2 py-1 rounded-md">{currentProject.serviceType || 'Standard Rate'}</p>
-                        </div>
+                        {canViewFinance && (
+                            <div className="fw-card border-slate-100 p-6 flex flex-col items-center justify-center text-center bg-white">
+                                <p className="text-[11px] text-slate-400 uppercase tracking-widest font-bold mb-2">Total Yield Evaluated</p>
+                                <p className="text-3xl font-black text-slate-800">₹{(currentProject.totalValue || 0).toLocaleString()}</p>
+                                <p className="text-xs font-semibold text-emerald-500 mt-2 bg-emerald-50 px-2 py-1 rounded-md">{currentProject.serviceType || 'Standard Rate'}</p>
+                            </div>
+                        )}
                         <div className="fw-card border-slate-100 p-6 flex flex-col justify-center bg-white space-y-4">
                             <div>
                                 <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-1">Launch Date</p>
@@ -334,9 +340,9 @@ const Projects = () => {
                         </div>
                     </div>
                     <div><label className={label}>Directive Detail</label><textarea rows={3} value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} className="fw-input resize-y" placeholder="Summarize core objectives..." /></div>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                    <div className={`grid grid-cols-1 ${canViewFinance ? 'sm:grid-cols-3' : 'sm:grid-cols-2'} gap-5`}>
                         <div><label className={label}>Architecture Stack</label><input value={form.serviceType} onChange={e => setForm({ ...form, serviceType: e.target.value })} className="fw-input" placeholder="Web, AI, Mobile..." /></div>
-                        <div><label className={label}>Projected Yield (₹)</label><input type="number" value={form.totalValue} onChange={e => setForm({ ...form, totalValue: Number(e.target.value) })} className="fw-input font-bold text-indigo-700" /></div>
+                        {canViewFinance && <div><label className={label}>Projected Yield (₹)</label><input type="number" value={form.totalValue} onChange={e => setForm({ ...form, totalValue: Number(e.target.value) })} className="fw-input font-bold text-indigo-700" /></div>}
                         <div><label className={label}>Phase Status</label><select value={form.status} onChange={e => setForm({ ...form, status: e.target.value })} className="fw-input cursor-pointer appearance-none select-wrapper">{STATUSES.map(s => <option key={s}>{s}</option>)}</select></div>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">

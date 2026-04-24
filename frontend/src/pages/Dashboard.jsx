@@ -103,21 +103,21 @@ const Dashboard = () => {
             </div>
 
             {/* ─── SUMMARY CARDS ─── */}
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-8 gap-4">
+            <div className={`grid grid-cols-2 md:grid-cols-4 gap-4 ${user?.role === 'admin' ? 'lg:grid-cols-4 xl:grid-cols-8' : 'lg:grid-cols-4 xl:grid-cols-4'}`}>
                 <KPICard label="Total Leads" value={c.totalLeads} icon={Target} color="amber" sub={`${c.conversionRate}% conversion`} />
                 <KPICard label="Total Clients" value={c.totalClients} icon={Users} color="sky" sub={`${c.activeClients} active`} />
                 <KPICard label="Active Projects" value={c.ongoingProjects} icon={FolderGit2} color="primary" sub={`${c.totalProjects} total projects`} />
-                {!isRestricted && <KPICard label="Total Revenue" value={fmt(c.totalRevenue)} icon={Wallet} color="emerald" trend={c.revenueGrowth} />}
-                {!isRestricted && <KPICard label="Total Expenses" value={fmt(c.totalExpenses)} icon={Wallet} color="rose" sub="All time" />}
-                {!isRestricted && <KPICard label="Net Profit" value={fmt(c.netProfit)} icon={TrendingUp} color={c.netProfit >= 0 ? 'violet' : 'rose'} sub={`${c.profitMargin}% margin`} />}
-                {!isRestricted && <KPICard label="Pending Payments" value={fmt(c.pendingPayments)} icon={Wallet} color="amber" sub={`₹${c.overduePayments.toLocaleString()} overdue`} />}
+                {user?.role === 'admin' && <KPICard label="Total Revenue" value={fmt(c.totalRevenue)} icon={Wallet} color="emerald" trend={c.revenueGrowth} />}
+                {user?.role === 'admin' && <KPICard label="Total Expenses" value={fmt(c.totalExpenses)} icon={Wallet} color="rose" sub="All time" />}
+                {user?.role === 'admin' && <KPICard label="Net Profit" value={fmt(c.netProfit)} icon={TrendingUp} color={c.netProfit >= 0 ? 'violet' : 'rose'} sub={`${c.profitMargin}% margin`} />}
+                {user?.role === 'admin' && <KPICard label="Pending Payments" value={fmt(c.pendingPayments)} icon={Wallet} color="amber" sub={`₹${c.overduePayments.toLocaleString()} overdue`} />}
                 <KPICard label="Tasks Due Today" value={c.tasksDueToday} icon={CalendarCheck} color="rose" sub={`${c.pendingTasks} pending total`} />
             </div>
 
             {/* ─── CHARTS SECTION ─── */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
                 {/* Revenue Chart */}
-                {!isRestricted && (
+                {user?.role === 'admin' && (
                     <div className="lg:col-span-2 bg-white rounded-[22px] p-6 border border-slate-100/80 relative overflow-hidden group">
                         <div className="absolute -left-20 -top-20 w-52 h-52 bg-primary/[0.03] rounded-full blur-3xl group-hover:bg-primary/[0.06] transition-all duration-700" />
                         <h3 className="text-[14px] font-black text-[#111111] mb-5 flex items-center gap-2 relative z-10">
@@ -148,7 +148,7 @@ const Dashboard = () => {
                 )}
 
                 {/* Project Status Donut and Activity Feed right columns */}
-                <div className={`${!isRestricted ? 'lg:col-span-1' : 'lg:col-span-3'} flex flex-col gap-5`}>
+                <div className={`${user?.role === 'admin' ? 'lg:col-span-1' : 'lg:col-span-3'} flex flex-col gap-5`}>
                     <div className="bg-white rounded-[22px] p-6 border border-slate-100/80 shrink-0">
                         <h3 className="text-[14px] font-black text-[#111111] mb-3 flex items-center gap-2">
                             <div className="w-8 h-8 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center">
@@ -171,39 +171,41 @@ const Dashboard = () => {
                         </div>
                     </div>
 
-                    <div className="bg-white rounded-[22px] p-6 border border-slate-100/80 flex flex-col flex-1 min-h-0 max-h-[350px]">
-                        <h3 className="text-[14px] font-black text-[#111111] mb-3 flex items-center gap-2 shrink-0">
-                            <div className="w-8 h-8 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center">
-                                <ActivityIcon className="w-4 h-4 text-emerald-500" />
+                    {user?.role === 'admin' && (
+                        <div className="bg-white rounded-[22px] p-6 border border-slate-100/80 flex flex-col flex-1 min-h-0 max-h-[350px]">
+                            <h3 className="text-[14px] font-black text-[#111111] mb-3 flex items-center gap-2 shrink-0">
+                                <div className="w-8 h-8 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center">
+                                    <ActivityIcon className="w-4 h-4 text-emerald-500" />
+                                </div>
+                                Recent Activity
+                                <span className="relative flex h-2 w-2 ml-1">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                                </span>
+                            </h3>
+                            <div className="space-y-2 flex-1 overflow-y-auto pr-2 custom-scrollbar">
+                                {raw.recentActivities?.length > 0 ? raw.recentActivities.map((a, i) => (
+                                    <div key={i} className="flex items-start gap-3 p-3 rounded-xl hover:bg-slate-50 transition-colors group/activity">
+                                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-slate-50 to-slate-100 border border-slate-200/60 flex items-center justify-center text-slate-500 text-[12px] font-black shrink-0 group-hover/activity:border-primary/20 group-hover/activity:text-primary transition-colors">
+                                            {a.user?.name?.[0] || '?'}
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                            <p className="text-[13px] text-slate-600 leading-snug">
+                                                <span className="font-bold text-[#111111]">{a.user?.name}</span>{' '}
+                                                <span className="font-medium">{a.action}</span>
+                                            </p>
+                                            {a.details && <p className="text-[11px] font-medium text-slate-400 mt-0.5 truncate">{a.details}</p>}
+                                        </div>
+                                    </div>
+                                )) : (
+                                    <div className="flex flex-col items-center justify-center h-full opacity-40">
+                                        <ActivityIcon className="w-10 h-10 text-slate-300 mb-2" />
+                                        <p className="text-sm font-bold text-slate-400">Awaiting activity...</p>
+                                    </div>
+                                )}
                             </div>
-                            Recent Activity
-                            <span className="relative flex h-2 w-2 ml-1">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-                            </span>
-                        </h3>
-                        <div className="space-y-2 flex-1 overflow-y-auto pr-2 custom-scrollbar">
-                            {raw.recentActivities?.length > 0 ? raw.recentActivities.map((a, i) => (
-                                <div key={i} className="flex items-start gap-3 p-3 rounded-xl hover:bg-slate-50 transition-colors group/activity">
-                                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-slate-50 to-slate-100 border border-slate-200/60 flex items-center justify-center text-slate-500 text-[12px] font-black shrink-0 group-hover/activity:border-primary/20 group-hover/activity:text-primary transition-colors">
-                                        {a.user?.name?.[0] || '?'}
-                                    </div>
-                                    <div className="min-w-0 flex-1">
-                                        <p className="text-[13px] text-slate-600 leading-snug">
-                                            <span className="font-bold text-[#111111]">{a.user?.name}</span>{' '}
-                                            <span className="font-medium">{a.action}</span>
-                                        </p>
-                                        {a.details && <p className="text-[11px] font-medium text-slate-400 mt-0.5 truncate">{a.details}</p>}
-                                    </div>
-                                </div>
-                            )) : (
-                                <div className="flex flex-col items-center justify-center h-full opacity-40">
-                                    <ActivityIcon className="w-10 h-10 text-slate-300 mb-2" />
-                                    <p className="text-sm font-bold text-slate-400">Awaiting activity...</p>
-                                </div>
-                            )}
                         </div>
-                    </div>
+                    )}
                 </div>
             </div>
         </div>

@@ -58,6 +58,10 @@ const Sidebar = () => {
         if (role === 'developer' && ['/leads', '/payments', '/salary', '/daily-record', '/analytics', '/reports'].includes(item.to)) return false;
         // Client: hide leads, financial, salary, analytics, reports
         if (role === 'client' && ['/leads', '/payments', '/salary', '/daily-record', '/analytics', '/reports'].includes(item.to)) return false;
+        // Employee: hide leads, financial, analytics, reports
+        if (role === 'employee' && ['/leads', '/payments', '/salary', '/analytics', '/reports'].includes(item.to)) return false;
+        // Intern: hide leads, clients, projects, financial, daily-record, analytics, reports
+        if (role === 'intern' && ['/leads', '/clients', '/projects', '/payments', '/salary', '/daily-record', '/analytics', '/reports'].includes(item.to)) return false;
         return true;
     });
 
