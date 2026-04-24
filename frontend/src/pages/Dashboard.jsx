@@ -186,8 +186,12 @@ const Dashboard = () => {
                             <div className="space-y-2 flex-1 overflow-y-auto pr-2 custom-scrollbar">
                                 {raw.recentActivities?.length > 0 ? raw.recentActivities.map((a, i) => (
                                     <div key={i} className="flex items-start gap-3 p-3 rounded-xl hover:bg-slate-50 transition-colors group/activity">
-                                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-slate-50 to-slate-100 border border-slate-200/60 flex items-center justify-center text-slate-500 text-[12px] font-black shrink-0 group-hover/activity:border-primary/20 group-hover/activity:text-primary transition-colors">
-                                            {a.user?.name?.[0] || '?'}
+                                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-slate-50 to-slate-100 border border-slate-200/60 flex items-center justify-center text-slate-500 text-[12px] font-black shrink-0 group-hover/activity:border-primary/20 group-hover/activity:text-primary transition-colors overflow-hidden">
+                                            {a.user?.avatar ? (
+                                                <img src={a.user.avatar} alt="avatar" className="w-full h-full object-cover" />
+                                            ) : (
+                                                a.user?.name?.[0] || '?'
+                                            )}
                                         </div>
                                         <div className="min-w-0 flex-1">
                                             <p className="text-[13px] text-slate-600 leading-snug">

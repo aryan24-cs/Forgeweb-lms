@@ -35,7 +35,7 @@ const ROLE_PERMISSIONS = {
 };
 
 const Settings = () => {
-    const { user, login } = useAuth(); // Need login to update context user after save
+    const { user, updateUser } = useAuth();
     const [tab, setTab] = useState(user?.role === 'admin' || user?.role === 'manager' ? 'general' : 'profile');
     const [users, setUsers] = useState([]);
     const [settings, setSettings] = useState({ agencyName: '', monthlyExpenses: 0 });
@@ -114,9 +114,7 @@ const Settings = () => {
             const body = { name: profileForm.name, avatar: profileForm.avatar };
             if (profileForm.password) body.password = profileForm.password;
             const res = await api.put(`/auth/users/${user._id}`, body);
-            // Update auth context
-            const token = localStorage.getItem('token');
-            if (token) login(token, res.data); // Keep user session alive with new data
+            updateUser(res.data); // Keep user session alive with new data
             toast.success('Profile updated successfully');
             setProfileForm({ ...profileForm, password: '' });
         } catch (err) {
@@ -257,7 +255,13 @@ const Settings = () => {
                             <div key={u._id} className={`fw-card p-6 ${!u.isActive ? 'opacity-50 grayscale' : ''}`}>
                                 <div className="flex items-start justify-between mb-5">
                                     <div className="flex items-center gap-4">
-                                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-sky-400 flex items-center justify-center text-white text-xl font-black shadow-lg shadow-indigo-500/20">{u.name?.charAt(0)}</div>
+                                        <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 border border-slate-300 flex items-center justify-center text-slate-500 font-bold shrink-0 overflow-hidden">
+                                            {u.avatar ? (
+                                                <img src={u.avatar} alt="avatar" className="w-full h-full object-cover" />
+                                            ) : (
+                                                u.name?.charAt(0)
+                                            )}
+                                        </div>
                                         <div>
                                             <h4 className="font-bold text-[16px] text-slate-800 leading-tight mb-1">{u.name}</h4>
                                             <p className="text-[13px] font-medium text-slate-500">{u.email}</p>
