@@ -57,12 +57,6 @@ router.post('/payments', auth, authorize('admin', 'manager'), async (req, res) =
             return res.status(400).json({ message: 'salaryMonth is required in YYYY-MM format' });
         }
 
-        // Duplicate check: prevent paying same person for same salary month
-        const existing = await SalaryPayment.findOne({ personName, salaryMonth });
-        if (existing) {
-            return res.status(409).json({ message: `Salary for ${personName} for ${salaryMonth} already exists` });
-        }
-
         const payment = new SalaryPayment({
             ...req.body,
             addedBy: req.user._id
@@ -88,10 +82,6 @@ router.post('/payments', auth, authorize('admin', 'manager'), async (req, res) =
         const savedPayment = await payment.save();
         res.status(201).json(savedPayment);
     } catch (err) {
-        // Handle mongoose unique index violation
-        if (err.code === 11000) {
-            return res.status(409).json({ message: 'Duplicate salary payment for this person and month' });
-        }
         res.status(400).json({ message: err.message });
     }
 });

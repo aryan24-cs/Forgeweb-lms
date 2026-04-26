@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 
 const salaryPaymentSchema = new mongoose.Schema({
     personName: { type: String, required: true },
-    role: { type: String, enum: ['Employee', 'Founder'], required: true },
+    role: { type: String, enum: ['Employee', 'Founder', 'Intern'], required: true },
     month: { type: String, required: true },
     salaryMonth: { type: String, default: '' }, // YYYY-MM format for accrual-basis reporting
     fromDate: { type: Date, required: true },
@@ -14,8 +14,5 @@ const salaryPaymentSchema = new mongoose.Schema({
     expenseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Expense' },
     addedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 }, { timestamps: true });
-
-// Prevent duplicate salary payment for the same person in the same salary month
-salaryPaymentSchema.index({ personName: 1, salaryMonth: 1 }, { unique: true, partialFilterExpression: { salaryMonth: { $ne: '' } } });
 
 export default mongoose.model('SalaryPayment', salaryPaymentSchema);
