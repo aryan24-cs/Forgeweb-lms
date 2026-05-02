@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { memo } from 'react';
 import Sidebar from './Sidebar';
 import Topbar from './Topbar';
 
-const Layout = ({ children }) => {
+const Layout = memo(({ children }) => {
     return (
         <div className="flex flex-col md:flex-row h-screen bg-transparent overflow-hidden">
             {/* Nav container acting as bottom bar on mobile and sidebar on desktop */}
@@ -21,6 +21,8 @@ const Layout = ({ children }) => {
             </div>
         </div>
     );
-};
+});
+
+Layout.displayName = 'Layout';
 
 export default Layout;

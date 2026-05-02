@@ -171,19 +171,19 @@ router.get('/sync', auth, async (req, res) => {
     try {
         const isAdmin = ['admin', 'manager'].includes(req.user.role);
         
+        // .lean() returns plain JS objects — 3-5x faster than Mongoose documents
         // Conditional fetching based on role for speed
         const queries = [
-            Client.find().sort('-createdAt'),
-            Project.find().sort('-createdAt'),
-            Task.find().populate('assignedTo', 'name'),
-            Activity.find().populate('user', 'name').sort('-createdAt').limit(20)
+            Client.find().sort('-createdAt').lean(),
+            Project.find().sort('-createdAt').populate('client', 'name').populate('teamMembers', 'name role').lean(),
+            Task.find().populate('assignedTo', 'name').lean(),
+            Activity.find().populate('user', 'name avatar').sort('-createdAt').limit(20).lean()
         ];
 
         if (isAdmin) {
-            queries.push(Lead.find().sort('-createdAt'));
-            queries.push(Payment.find().populate('client', 'name').sort('-createdAt'));
-            queries.push(Expense.find().sort('-createdAt'));
-            // Note: Withdrawals and Salaries might also be added here if needed
+            queries.push(Lead.find().sort('-createdAt').lean());
+            queries.push(Payment.find().populate('client', 'name totalDealValue').sort('-createdAt').lean());
+            queries.push(Expense.find().sort('-createdAt').lean());
         }
 
         const results = await Promise.all(queries);
@@ -201,6 +201,8 @@ router.get('/sync', auth, async (req, res) => {
             data.expenses = results[6];
         }
 
+        // Set cache headers for browser caching (short TTL for fresh data)
+        res.set('Cache-Control', 'private, max-age=30');
         res.json(data);
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -213,7 +215,7 @@ router.get('/sync', auth, async (req, res) => {
 router.get('/stats', auth, async (req, res) => {
     try {
         const [clients, leads, projects, payments, tasks, expenses] = await Promise.all([
-            Client.find(), Lead.find(), Project.find(), Payment.find(), Task.find(), Expense.find()
+            Client.find().lean(), Lead.find().lean(), Project.find().lean(), Payment.find().lean(), Task.find().lean(), Expense.find().lean()
         ]);
         const now = new Date();
         const m = calcCoreMetrics(clients, leads, projects, payments, expenses, tasks, now);
@@ -246,7 +248,7 @@ router.get('/stats', auth, async (req, res) => {
         }
 
         // ── Activity Feed ──
-        const recentActivities = await Activity.find().populate('user', 'name').sort('-createdAt').limit(15);
+        const recentActivities = await Activity.find().populate('user', 'name').sort('-createdAt').limit(15).lean();
 
         res.json({
             cards: {
@@ -286,12 +288,12 @@ router.get('/stats', auth, async (req, res) => {
 router.get('/finance', auth, authorize('admin', 'manager'), async (req, res) => {
     try {
         const [payments, expenses, clients, leads, projects, tasks] = await Promise.all([
-            Payment.find().populate('client', 'name'),
-            Expense.find(),
-            Client.find(),
-            Lead.find(),
-            Project.find(),
-            Task.find()
+            Payment.find().populate('client', 'name').lean(),
+            Expense.find().lean(),
+            Client.find().lean(),
+            Lead.find().lean(),
+            Project.find().lean(),
+            Task.find().lean()
         ]);
         const now = new Date();
         const m = calcCoreMetrics(clients, leads, projects, payments, expenses, tasks, now);
@@ -367,7 +369,7 @@ router.get('/finance', auth, authorize('admin', 'manager'), async (req, res) => 
 router.get('/analytics', auth, authorize('admin', 'manager'), async (req, res) => {
     try {
         const [clients, leads, projects, payments, expenses, tasks] = await Promise.all([
-            Client.find(), Lead.find(), Project.find(), Payment.find(), Expense.find(), Task.find()
+            Client.find().lean(), Lead.find().lean(), Project.find().lean(), Payment.find().lean(), Expense.find().lean(), Task.find().lean()
         ]);
         const now = new Date();
         const m = calcCoreMetrics(clients, leads, projects, payments, expenses, tasks, now);

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, memo } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import logoImg from '../../assets/logo.png';
@@ -33,7 +33,7 @@ const navItems = [
     { to: '/settings', label: 'Settings', icon: 'settings' },
 ];
 
-const Sidebar = () => {
+const Sidebar = memo(() => {
     const [collapsed, setCollapsed] = useState(() => {
         return localStorage.getItem('sidebar_collapsed') === 'true';
     });
@@ -219,6 +219,8 @@ const Sidebar = () => {
             </nav>
         </>
     );
-};
+});
+
+Sidebar.displayName = 'Sidebar';
 
 export default Sidebar;

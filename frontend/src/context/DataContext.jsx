@@ -9,7 +9,7 @@ export const DataProvider = ({ children }) => {
     const { user } = useAuth();
 
     // Raw Data State
-    const cached = JSON.parse(localStorage.getItem('fw_data_cache') || '{}');
+    const cached = useRef(JSON.parse(localStorage.getItem('fw_data_cache') || '{}')).current;
     const [leads, setLeads] = useState(cached.leads || []);
     const [clients, setClients] = useState(cached.clients || []);
     const [projects, setProjects] = useState(cached.projects || []);
@@ -25,6 +25,10 @@ export const DataProvider = ({ children }) => {
     const lastSync = useRef(0);
     const syncLock = useRef(false);
 
+    // Use refs to avoid stale closures in refreshData — prevents unnecessary re-creation
+    const dataRefs = useRef({});
+    dataRefs.current = { founderWithdrawals, salaryConfig, salaryPayments };
+
     const refreshData = useCallback(async (forced = false) => {
         if (!user || syncLock.current) return;
         const now = Date.now();
@@ -32,10 +36,17 @@ export const DataProvider = ({ children }) => {
 
         syncLock.current = true;
         try {
-            // Optimized Single-Shot Sync Fetch
-            const syncRes = await api.get('/dashboard/sync');
+            // Fire ALL requests in parallel — single round-trip instead of sequential
+            const [syncRes, withdrawRes, salConfigRes, salPayRes] = await Promise.all([
+                api.get('/dashboard/sync'),
+                api.get('/founder-withdrawals').catch(() => ({ data: [] })),
+                api.get('/salaries/config').catch(() => ({ data: [] })),
+                api.get('/salaries/payments').catch(() => ({ data: [] }))
+            ]);
+
             const data = syncRes.data;
 
+            // Batch all state updates together — React 18 auto-batches these
             setLeads(data.leads || []);
             setClients(data.clients || []);
             setProjects(data.projects || []);
@@ -43,39 +54,36 @@ export const DataProvider = ({ children }) => {
             setExpenses(data.expenses || []);
             setTasks(data.tasks || []);
             setRecentActivities(data.recentActivities || []);
-
-            // Fetch financial sub-routes (always re-fetch to pick up migration and salary changes)
-            const [withdrawRes, salConfigRes, salPayRes] = await Promise.all([
-                api.get('/founder-withdrawals').catch(() => ({ data: [] })),
-                api.get('/salaries/config').catch(() => ({ data: [] })),
-                api.get('/salaries/payments').catch(() => ({ data: [] }))
-            ]);
             setFounderWithdrawals(withdrawRes.data);
             setSalaryConfig(salConfigRes.data);
             setSalaryPayments(salPayRes.data);
 
             lastSync.current = Date.now();
             
-            // Persistent Cache
-            localStorage.setItem('fw_data_cache', JSON.stringify({
-                leads: data.leads || [],
-                clients: data.clients || [],
-                projects: data.projects || [],
-                payments: data.payments || [],
-                expenses: data.expenses || [],
-                tasks: data.tasks || [],
-                recentActivities: data.recentActivities || [],
-                founderWithdrawals: founderWithdrawals,
-                salaryConfig: salaryConfig,
-                salaryPayments: salaryPayments
-            }));
+            // Async cache write — don't block rendering
+            requestIdleCallback(() => {
+                try {
+                    localStorage.setItem('fw_data_cache', JSON.stringify({
+                        leads: data.leads || [],
+                        clients: data.clients || [],
+                        projects: data.projects || [],
+                        payments: data.payments || [],
+                        expenses: data.expenses || [],
+                        tasks: data.tasks || [],
+                        recentActivities: data.recentActivities || [],
+                        founderWithdrawals: withdrawRes.data,
+                        salaryConfig: salConfigRes.data,
+                        salaryPayments: salPayRes.data
+                    }));
+                } catch { /* localStorage full — ignore gracefully */ }
+            });
         } catch (error) {
             console.error('Core sync synchronization failed:', error);
         } finally {
             syncLock.current = false;
             setLoading(false);
         }
-    }, [user, founderWithdrawals, salaryConfig, salaryPayments]);
+    }, [user]); // Only depends on user — no stale closure issues
 
     useEffect(() => {
         refreshData(true);

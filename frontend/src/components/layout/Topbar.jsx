@@ -1,9 +1,9 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useEffect, memo } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
 import { useNavigate } from 'react-router-dom';
 
-const Topbar = () => {
+const Topbar = memo(() => {
     const { user, logout } = useAuth();
     const { raw } = useData();
     const navigate = useNavigate();
@@ -188,6 +188,8 @@ const Topbar = () => {
             </div>
         </header>
     );
-};
+});
+
+Topbar.displayName = 'Topbar';
 
 export default Topbar;
