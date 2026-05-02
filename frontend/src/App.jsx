@@ -20,6 +20,7 @@ const Settings = lazy(() => import('./pages/Settings'));
 const Salary = lazy(() => import('./pages/Salary'));
 const DailyChecklist = lazy(() => import('./pages/DailyChecklist'));
 const Notes = lazy(() => import('./pages/Notes'));
+const Revenue = lazy(() => import('./pages/Revenue'));
 
 // Shared authenticated shell — mounted ONCE, persists across all route changes
 // This prevents Layout/DataProvider/Sidebar/Topbar from unmounting/remounting
@@ -68,6 +69,7 @@ function App() {
 
                     {/* Restricted Routes — Financial Suite, Analytics, Reports blocked for sales & developer */}
                     <Route path="payments" element={<RoleGate restrictedRoles={['sales', 'developer', 'client', 'intern', 'employee']}><Payments /></RoleGate>} />
+                    <Route path="revenue" element={<RoleGate restrictedRoles={['sales', 'developer', 'client', 'intern', 'employee']}><Revenue /></RoleGate>} />
                     <Route path="salary" element={<RoleGate restrictedRoles={['sales', 'developer', 'client', 'intern', 'employee']}><Salary /></RoleGate>} />
                     <Route path="daily-record" element={<RoleGate restrictedRoles={['sales', 'developer', 'client', 'intern']}><DailyChecklist /></RoleGate>} />
                     <Route path="analytics" element={<RoleGate restrictedRoles={['sales', 'developer', 'client', 'intern', 'employee']}><Analytics /></RoleGate>} />

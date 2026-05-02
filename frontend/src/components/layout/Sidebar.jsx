@@ -16,6 +16,7 @@ const icons = {
     dailyRecord: <svg className="w-[22px] h-[22px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>,
     settings: <svg className="w-[22px] h-[22px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>,
     notes: <svg className="w-[22px] h-[22px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>,
+    revenue: <svg className="w-[22px] h-[22px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 8h6m-5 0a3 3 0 110 6H9l3 3m-3-6h6m6 1a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
 };
 
 const navItems = [
@@ -23,6 +24,7 @@ const navItems = [
     { to: '/leads', label: 'Leads', icon: 'leads' },
     { to: '/clients', label: 'Clients', icon: 'clients' },
     { to: '/projects', label: 'Projects', icon: 'projects' },
+    { to: '/revenue', label: 'Revenue', icon: 'revenue' },
     { to: '/payments', label: 'Finance', icon: 'payments' },
     { to: '/salary', label: 'Salary', icon: 'salary' },
     { to: '/analytics', label: 'Analytics', icon: 'analytics' },
@@ -53,15 +55,15 @@ const Sidebar = memo(() => {
     const role = user?.role;
     const visibleNavItems = navItems.filter(item => {
         // Sales: hide financial & analytics modules
-        if (role === 'sales' && ['/payments', '/salary', '/daily-record', '/analytics', '/reports'].includes(item.to)) return false;
+        if (role === 'sales' && ['/revenue', '/payments', '/salary', '/daily-record', '/analytics', '/reports'].includes(item.to)) return false;
         // Developer: hide leads (CRM), financial, salary, analytics, reports
-        if (role === 'developer' && ['/leads', '/payments', '/salary', '/daily-record', '/analytics', '/reports'].includes(item.to)) return false;
+        if (role === 'developer' && ['/leads', '/revenue', '/payments', '/salary', '/daily-record', '/analytics', '/reports'].includes(item.to)) return false;
         // Client: hide leads, financial, salary, analytics, reports
-        if (role === 'client' && ['/leads', '/payments', '/salary', '/daily-record', '/analytics', '/reports'].includes(item.to)) return false;
+        if (role === 'client' && ['/leads', '/revenue', '/payments', '/salary', '/daily-record', '/analytics', '/reports'].includes(item.to)) return false;
         // Employee: hide leads, financial, analytics, reports
-        if (role === 'employee' && ['/leads', '/payments', '/salary', '/analytics', '/reports'].includes(item.to)) return false;
+        if (role === 'employee' && ['/leads', '/revenue', '/payments', '/salary', '/analytics', '/reports'].includes(item.to)) return false;
         // Intern: hide leads, clients, projects, financial, daily-record, analytics, reports
-        if (role === 'intern' && ['/leads', '/clients', '/projects', '/payments', '/salary', '/daily-record', '/analytics', '/reports'].includes(item.to)) return false;
+        if (role === 'intern' && ['/leads', '/clients', '/projects', '/revenue', '/payments', '/salary', '/daily-record', '/analytics', '/reports'].includes(item.to)) return false;
         return true;
     });
 
