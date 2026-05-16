@@ -201,8 +201,8 @@ router.get('/sync', auth, async (req, res) => {
             data.expenses = results[6];
         }
 
-        // Set cache headers for browser caching (short TTL for fresh data)
-        res.set('Cache-Control', 'private, max-age=30');
+        // Prevent browser caching so that immediate updates reflect correctly
+        res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
         res.json(data);
     } catch (err) {
         res.status(500).json({ message: err.message });

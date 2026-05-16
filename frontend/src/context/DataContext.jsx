@@ -29,7 +29,7 @@ export const DataProvider = ({ children }) => {
     const dataRefs = useRef({});
     dataRefs.current = { founderWithdrawals, salaryConfig, salaryPayments };
 
-    const refreshData = useCallback(async (forced = false) => {
+    const refreshData = useCallback(async (forced = true) => {
         if (!user || syncLock.current) return;
         const now = Date.now();
         if (!forced && now - lastSync.current < 60000) return; // Prevent frequent syncs (max 1/min)
@@ -88,7 +88,7 @@ export const DataProvider = ({ children }) => {
     useEffect(() => {
         refreshData(true);
         const interval = setInterval(() => {
-            if (document.visibilityState === 'visible') refreshData();
+            if (document.visibilityState === 'visible') refreshData(false);
         }, 120000); // Poll once every 2 minutes for passive sync
         return () => clearInterval(interval);
     }, [refreshData]);
